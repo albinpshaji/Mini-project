@@ -1,0 +1,237 @@
+{
+  "metadata": {
+    "facility_name": "St. Jude Metropolitan Hospital",
+    "campus": "Main Clinical Center",
+    "version": "1.0",
+    "total_rooms": 14
+  },
+  "rooms": [
+    {
+      "room_id": "cardiac_120",
+      "room_number": "120",
+      "department": "Cardiology & Chest Pain Bay",
+      "floor": "1st Floor, East Wing",
+      "acuity_tier": "Urgent",
+      "clinical_keywords": [
+        "chest pain",
+        "chest tightness",
+        "heart pounding",
+        "palpitations",
+        "angina",
+        "irregular heartbeat",
+        "cardiac",
+        "heart fluttering",
+        "chest pressure",
+        "radiating chest discomfort"
+      ],
+      "routing_guidance": "Direct patients with chest discomfort or cardiac symptoms to Room 120 once initial intake is complete."
+    },
+    {
+      "room_id": "fever_20",
+      "room_number": "20",
+      "department": "Fever & Acute Infection Clinic",
+      "floor": "Ground Floor, West Wing",
+      "acuity_tier": "Routine",
+      "clinical_keywords": [
+        "fever",
+        "high temperature",
+        "chills",
+        "shivering",
+        "burning up",
+        "sweats",
+        "viral infection",
+        "flu-like symptoms",
+        "feverish"
+      ],
+      "routing_guidance": "Direct febrile patients to Room 20 for temperature check and infectious disease intake."
+    },
+    {
+      "room_id": "emergency_10",
+      "room_number": "10",
+      "department": "Emergency Resuscitation & Trauma",
+      "floor": "Ground Floor, Red Bay",
+      "acuity_tier": "Red Flag Emergency",
+      "clinical_keywords": [
+        "severe bleeding",
+        "unconscious",
+        "passed out",
+        "stroke",
+        "facial droop",
+        "cannot breathe",
+        "anaphylaxis",
+        "severe trauma",
+        "massive hemorrhage",
+        "unresponsive",
+        "sudden collapse"
+      ],
+      "routing_guidance": "Immediate emergency room for critical life-threatening conditions."
+    },
+    {
+      "room_id": "ortho_105",
+      "room_number": "105",
+      "department": "Orthopedics & Minor Injuries",
+      "floor": "1st Floor, South Wing",
+      "acuity_tier": "Routine",
+      "clinical_keywords": [
+        "broken bone",
+        "fracture",
+        "sprained ankle",
+        "twisted wrist",
+        "knee injury",
+        "swollen ankle",
+        "joint pain",
+        "cannot walk",
+        "bone pain",
+        "dislocation"
+      ],
+      "routing_guidance": "Direct musculoskeletal trauma, sprains, and fractures to Room 105 for splinting/x-ray."
+    },
+    {
+      "room_id": "pulmonary_45",
+      "room_number": "45",
+      "department": "Pulmonology & Respiratory Care",
+      "floor": "Ground Floor, North Wing",
+      "acuity_tier": "Urgent",
+      "clinical_keywords": [
+        "wheezing",
+        "asthma attack",
+        "inhaler",
+        "persistent cough",
+        "bronchitis",
+        "shortness of breath",
+        "stridor",
+        "chest congestion",
+        "heavy breathing"
+      ],
+      "routing_guidance": "Direct stable asthmatic or respiratory patients needing nebulization to Room 45."
+    },
+    {
+      "room_id": "neuro_210",
+      "room_number": "210",
+      "department": "Neurology Clinic",
+      "floor": "2nd Floor, Central Tower",
+      "acuity_tier": "Standard / Specialist",
+      "clinical_keywords": [
+        "migraine",
+        "severe headache",
+        "dizziness",
+        "vertigo",
+        "seizure",
+        "numbness in fingers",
+        "pins and needles",
+        "light sensitivity"
+      ],
+      "routing_guidance": "Direct non-acute neurological presentations, migraines, and vertigo to Room 210."
+    },
+    {
+      "room_id": "gastro_80",
+      "room_number": "80",
+      "department": "Gastroenterology & Abdominal Clinic",
+      "floor": "Ground Floor, East Corridor",
+      "acuity_tier": "Standard",
+      "clinical_keywords": [
+        "stomach pain",
+        "abdominal cramps",
+        "nausea",
+        "vomiting",
+        "food poisoning",
+        "diarrhea",
+        "belly ache",
+        "acid reflux",
+        "stomach ulcer"
+      ],
+      "routing_guidance": "Direct abdominal discomfort and acute gastroenteritis to Room 80."
+    },
+    {
+      "room_id": "ent_15",
+      "room_number": "15",
+      "department": "Ear, Nose & Throat (ENT)",
+      "floor": "Ground Floor, West Corridor",
+      "acuity_tier": "Routine",
+      "clinical_keywords": [
+        "ear pain",
+        "ear infection",
+        "sore throat",
+        "tonsils",
+        "sinus pressure",
+        "blocked ear",
+        "runny nose",
+        "difficulty swallowing",
+        "hoarse voice"
+      ],
+      "routing_guidance": "Direct upper respiratory, ear, and throat complaints to Room 15."
+    },
+    {
+      "room_id": "eye_130",
+      "room_number": "130",
+      "department": "Ophthalmology & Eye Bay",
+      "floor": "1st Floor, West Wing",
+      "acuity_tier": "Urgent / Routine",
+      "clinical_keywords": [
+        "eye pain",
+        "foreign object in eye",
+        "chemical in eye",
+        "blurry vision",
+        "swollen eye",
+        "conjunctivitis",
+        "pink eye",
+        "eye redness"
+      ],
+      "routing_guidance": "Direct acute eye issues and vision disturbances to Room 130."
+    },
+    {
+      "room_id": "pediatric_25",
+      "room_number": "25",
+      "department": "Pediatric Triage & Care",
+      "floor": "Ground Floor, Yellow Wing",
+      "acuity_tier": "Routine / Urgent",
+      "clinical_keywords": [
+        "child",
+        "baby",
+        "toddler",
+        "infant",
+        "pediatric",
+        "my 5 year old",
+        "my son has fever",
+        "my daughter",
+        "newborn"
+      ],
+      "routing_guidance": "Direct infant and child presentations to Room 25 (Pediatrics)."
+    },
+    {
+      "room_id": "derma_112",
+      "room_number": "112",
+      "department": "Dermatology & Skin Clinic",
+      "floor": "1st Floor, North Corridor",
+      "acuity_tier": "Routine",
+      "clinical_keywords": [
+        "skin rash",
+        "hives",
+        "eczema",
+        "itchy skin",
+        "blisters",
+        "skin allergic reaction",
+        "boil",
+        "skin swelling"
+      ],
+      "routing_guidance": "Direct dermatological rashes and localized allergic reactions to Room 112."
+    },
+    {
+      "room_id": "general_05",
+      "room_number": "5",
+      "department": "General Medicine & Health Intake",
+      "floor": "Ground Floor, Main Atrium",
+      "acuity_tier": "Routine",
+      "clinical_keywords": [
+        "general checkup",
+        "feeling weak",
+        "mild malaise",
+        "fatigue",
+        "prescription refill",
+        "blood pressure check",
+        "routine consultation"
+      ],
+      "routing_guidance": "Direct non-specific, mild or general constitutional issues to Room 5."
+    }
+  ]
+}

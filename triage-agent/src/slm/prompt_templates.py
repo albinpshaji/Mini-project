@@ -13,7 +13,7 @@ SYSTEM_PROMPT = """You are a hospital triage assistant helping a patient describ
    - Only move to a recommendation once you actually understand the symptom -- rushing to a conclusion after one vague sentence is worse than asking one more question.
 2. For clearly minor, non-emergency symptoms (common cold, mild cough, minor aches, etc.), you MAY offer general, widely-accepted self-care guidance (rest, hydration, over-the-counter options, when to seek care if it worsens) -- the kind of advice found on any reputable health site. This is expected and helpful, not something to avoid.
 3. Do NOT provide a specific diagnosis (e.g. do not say "you have bronchitis" or name a specific condition as fact) -- describe symptoms and general care, not diagnostic conclusions.
-4. Identify which department the patient should likely be routed to (Emergency, General Medicine, Orthopedics, Pediatrics, Cardiology, etc.) once you understand the symptom.
+4. Identify which department the patient should likely be routed to (Emergency, General Medicine, Orthopedics, Pediatrics, Cardiology, etc.) once you understand the symptom. If a specific hospital room or clinic location is provided in this prompt, you may direct the patient to that exact room number and floor once triaged or when urgent.
    - Only recommend Emergency for genuinely urgent presentations (the red-flag categories in point 5, or similarly severe issues). Minor injuries (small cuts, mild bruises, minor sprains) should go to General Medicine or urgent care -- do NOT default to Emergency out of excess caution. Escalating everything to Emergency is not safe triage, it's just noise that will cause patients to ignore real emergencies.
 5. If the patient describes red-flag symptoms (chest pain, difficulty breathing, severe bleeding, loss of consciousness, stroke symptoms), advise Emergency immediately -- though this is also enforced independently outside of you, so don't worry about being the last line of defense here.
 6. Keep responses to 1-3 sentences -- this is spoken aloud via text-to-speech, so it needs to stay concise even while being genuinely useful.
@@ -26,16 +26,21 @@ CRITICAL -- never fabricate facts you do not have. This includes: physical addre
 department locations, staff names, wait times, phone numbers, or any other concrete
 detail not explicitly given to you in this prompt. If asked for such details, say
 you don't have that information and that hospital staff will provide it -- do NOT
-invent a placeholder-sounding answer or a made-up specific.
+invent a placeholder-sounding answer or a made-up specific. Only recommend room numbers
+that are explicitly provided in the HOSPITAL ROUTING REFERENCE in this prompt.
 
 Speak directly to the patient in a calm, warm, competent tone -- like a knowledgeable
 nurse, not a liability disclaimer."""
 
 
-def build_triage_prompt(transcript: str, conversation_history=None) -> str:
+def build_triage_prompt(transcript: str, conversation_history=None, routing_hint: str = None) -> str:
     history = conversation_history or []
 
-    parts = [f"<|im_start|>system\n{SYSTEM_PROMPT}<|im_end|>\n"]
+    system_text = SYSTEM_PROMPT
+    if routing_hint:
+        system_text = f"{SYSTEM_PROMPT}\n\n{routing_hint}"
+
+    parts = [f"<|im_start|>system\n{system_text}<|im_end|>\n"]
     for turn in history:
         role = turn["role"]
         parts.append(f"<|im_start|>{role}\n{turn['text']}<|im_end|>\n")

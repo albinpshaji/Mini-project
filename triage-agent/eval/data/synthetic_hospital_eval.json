@@ -1,0 +1,152 @@
+[
+  {
+    "id": "syn_cardiac_01",
+    "transcript": "I have had this persistent tightness and pressure in my chest since this morning.",
+    "expected_room": "120",
+    "expected_dept": "Cardiology & Chest Pain Bay",
+    "symptom_category": "cardiac",
+    "expected_retrieval": true,
+    "is_emergency": false,
+    "nurse_clarification_needed": true
+  },
+  {
+    "id": "syn_cardiac_02",
+    "transcript": "My heart feels like it is pounding out of my chest and fluttering when I sit down.",
+    "expected_room": "120",
+    "expected_dept": "Cardiology & Chest Pain Bay",
+    "symptom_category": "cardiac",
+    "expected_retrieval": true,
+    "is_emergency": false,
+    "nurse_clarification_needed": true
+  },
+  {
+    "id": "syn_cardiac_03",
+    "transcript": "I feel angina pain across my chest wall that radiates up my neck.",
+    "expected_room": "120",
+    "expected_dept": "Cardiology & Chest Pain Bay",
+    "symptom_category": "cardiac",
+    "expected_retrieval": true,
+    "is_emergency": true,
+    "nurse_clarification_needed": false
+  },
+  {
+    "id": "syn_fever_01",
+    "transcript": "I have a high fever of 102 degrees and shivering chills that started last night.",
+    "expected_room": "20",
+    "expected_dept": "Fever & Acute Infection Clinic",
+    "symptom_category": "fever",
+    "expected_retrieval": true,
+    "is_emergency": false,
+    "nurse_clarification_needed": true
+  },
+  {
+    "id": "syn_fever_02",
+    "transcript": "I am burning up with sweats, chills, and viral flu-like body aches.",
+    "expected_room": "20",
+    "expected_dept": "Fever & Acute Infection Clinic",
+    "symptom_category": "fever",
+    "expected_retrieval": true,
+    "is_emergency": false,
+    "nurse_clarification_needed": true
+  },
+  {
+    "id": "syn_fever_03",
+    "transcript": "My temperature has been high for three days and I feel feverish all over.",
+    "expected_room": "20",
+    "expected_dept": "Fever & Acute Infection Clinic",
+    "symptom_category": "fever",
+    "expected_retrieval": true,
+    "is_emergency": false,
+    "nurse_clarification_needed": true
+  },
+  {
+    "id": "syn_ortho_01",
+    "transcript": "I twisted my ankle playing basketball and now it is swollen and I cannot put weight on it.",
+    "expected_room": "105",
+    "expected_dept": "Orthopedics & Minor Injuries",
+    "symptom_category": "orthopedic",
+    "expected_retrieval": true,
+    "is_emergency": false,
+    "nurse_clarification_needed": true
+  },
+  {
+    "id": "syn_ortho_02",
+    "transcript": "I tripped on the stairs and heard a snap in my wrist, I think it is a broken bone.",
+    "expected_room": "105",
+    "expected_dept": "Orthopedics & Minor Injuries",
+    "symptom_category": "orthopedic",
+    "expected_retrieval": true,
+    "is_emergency": false,
+    "nurse_clarification_needed": true
+  },
+  {
+    "id": "syn_pulm_01",
+    "transcript": "I have an asthma flare up with wheezing and my inhaler is not providing relief.",
+    "expected_room": "45",
+    "expected_dept": "Pulmonology & Respiratory Care",
+    "symptom_category": "respiratory",
+    "expected_retrieval": true,
+    "is_emergency": false,
+    "nurse_clarification_needed": true
+  },
+  {
+    "id": "syn_ent_01",
+    "transcript": "I have severe ear pain and pressure in my left ear with difficulty swallowing.",
+    "expected_room": "15",
+    "expected_dept": "Ear, Nose & Throat (ENT)",
+    "symptom_category": "ent",
+    "expected_retrieval": true,
+    "is_emergency": false,
+    "nurse_clarification_needed": true
+  },
+  {
+    "id": "syn_gastro_01",
+    "transcript": "Severe abdominal cramps and continuous nausea after eating seafood.",
+    "expected_room": "80",
+    "expected_dept": "Gastroenterology & Abdominal Clinic",
+    "symptom_category": "gastro",
+    "expected_retrieval": true,
+    "is_emergency": false,
+    "nurse_clarification_needed": true
+  },
+  {
+    "id": "syn_emergency_01",
+    "transcript": "He is losing massive blood from a deep wound and is starting to pass out.",
+    "expected_room": "10",
+    "expected_dept": "Emergency Resuscitation & Trauma",
+    "symptom_category": "emergency",
+    "expected_retrieval": true,
+    "is_emergency": true,
+    "nurse_clarification_needed": false
+  },
+  {
+    "id": "syn_irrelevant_01",
+    "transcript": "Hello good morning, could you tell me where the parking validation desk is?",
+    "expected_room": null,
+    "expected_dept": null,
+    "symptom_category": "administrative",
+    "expected_retrieval": false,
+    "is_emergency": false,
+    "nurse_clarification_needed": false
+  },
+  {
+    "id": "syn_irrelevant_02",
+    "transcript": "Thank you nurse, I appreciate the help.",
+    "expected_room": null,
+    "expected_dept": null,
+    "symptom_category": "chit_chat",
+    "expected_retrieval": false,
+    "is_emergency": false,
+    "nurse_clarification_needed": false
+  },
+  {
+    "id": "syn_irrelevant_03",
+    "transcript": "Is there a cafeteria or coffee shop nearby?",
+    "expected_room": null,
+    "expected_dept": null,
+    "symptom_category": "facility",
+    "expected_retrieval": false,
+    "is_emergency": false,
+    "nurse_clarification_needed": false
+  }
+]

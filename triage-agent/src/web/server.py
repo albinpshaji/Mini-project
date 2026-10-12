@@ -342,6 +342,18 @@ def update_settings(req: SettingsRequest):
     }
 
 
+@app.get("/api/hospital/directory")
+def get_hospital_directory():
+    """Returns the loaded hospital rooms and emergency room for UI inspection."""
+    if slm_engine and slm_engine.hospital_router:
+        return {
+            "status": "ok",
+            "rooms": slm_engine.hospital_router.rooms,
+            "emergency_room": slm_engine.hospital_router.emergency_room.__dict__ if slm_engine.hospital_router.emergency_room else None,
+        }
+    return {"status": "disabled", "rooms": []}
+
+
 @app.get("/api/logs")
 def get_logs(limit: int = 80):
     """Returns recent server terminal logs and latest turn latency telemetry."""
@@ -386,7 +398,8 @@ def handle_chat_turn(req: ChatRequest):
     handoff_decision = evaluate_handoff(
         user_text,
         session.turn_count,
-        acoustic_biomarkers=None
+        acoustic_biomarkers=None,
+        hospital_router=slm_engine.hospital_router if slm_engine else None,
     )
     t_safety_end = time.time()
 
@@ -573,7 +586,8 @@ def process_audio_pipeline(audio_bytes: bytes, filename_hint: str = "speech.webm
     handoff_decision = evaluate_handoff(
         transcribed_text,
         session.turn_count,
-        acoustic_biomarkers=biomarkers
+        acoustic_biomarkers=biomarkers,
+        hospital_router=slm_engine.hospital_router if slm_engine else None,
     )
 
     is_emergency = handoff_decision.escalate

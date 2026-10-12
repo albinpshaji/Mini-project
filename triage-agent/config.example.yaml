@@ -38,6 +38,12 @@ cv:
 speculative:
   divergence_threshold: 0.7         # commit if similarity >= threshold, else rollback and regenerate
 
+hospital:
+  enabled: true                     # sub-millisecond selective room routing
+  directory_path: "eval/data/hospital_directory.json"
+  match_threshold: 0.30
+  top_k: 1
+
 logging:
   level: "INFO"
   log_dir: "experiments/logs"

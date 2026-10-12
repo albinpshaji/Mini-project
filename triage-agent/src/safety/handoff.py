@@ -56,6 +56,7 @@ def evaluate_handoff(
     transcript: str,
     turn_count: int,
     acoustic_biomarkers: Optional[Any] = None,
+    hospital_router: Optional[Any] = None,
 ) -> HandoffDecision:
     # 1. Paralinguistic Acoustic Distress Override (Google HeAR / Innovation 9)
     if acoustic_biomarkers is not None and getattr(acoustic_biomarkers, "acuity_boost", 0) >= 2:
@@ -70,10 +71,18 @@ def evaluate_handoff(
     red_flag_result: RedFlagResult = check_red_flags(transcript)
 
     if red_flag_result.triggered:
+        er_msg = EMERGENCY_OVERRIDE_MESSAGE
+        if hospital_router is not None and getattr(hospital_router, "emergency_room", None) is not None:
+            er = hospital_router.emergency_room
+            er_msg = (
+                f"Based on what you've described, this needs immediate attention. "
+                f"Please proceed to Room {er.room_number} ({er.department}, {er.floor}) right away. "
+                f"I'm alerting hospital staff now."
+            )
         return HandoffDecision(
             escalate=True,
             reason="red_flag",
-            override_message=EMERGENCY_OVERRIDE_MESSAGE,
+            override_message=er_msg,
             red_flag_category=red_flag_result.category,
         )
 

@@ -82,7 +82,12 @@ class SpeculativeTriagePipeline(SequentialTriagePipeline):
         self.conversation_history.append({"role": "user", "text": transcript})
         self.turn_count += 1
 
-        handoff_decision = evaluate_handoff(transcript, self.turn_count, acoustic_biomarkers=biomarkers)
+        handoff_decision = evaluate_handoff(
+            transcript,
+            self.turn_count,
+            acoustic_biomarkers=biomarkers,
+            hospital_router=getattr(self.slm, "hospital_router", None),
+        )
 
         t_slm_start = time.time()
         speculative_used = False

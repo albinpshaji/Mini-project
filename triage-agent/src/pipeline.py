@@ -14,6 +14,7 @@ Run with: python -m src.pipeline
 import time
 import yaml
 import logging
+import numpy as np
 
 from src.asr.streaming_asr import StreamingASR
 from src.slm.slm_engine import SLMEngine
@@ -129,7 +130,12 @@ class SequentialTriagePipeline:
         self.conversation_history.append({"role": "user", "text": transcript})
         self.turn_count += 1
 
-        handoff_decision = evaluate_handoff(transcript, self.turn_count, acoustic_biomarkers=biomarkers)
+        handoff_decision = evaluate_handoff(
+            transcript,
+            self.turn_count,
+            acoustic_biomarkers=biomarkers,
+            hospital_router=getattr(self.slm, "hospital_router", None),
+        )
 
         t_start = time.time()
         ttfa_ms = None
