@@ -65,7 +65,7 @@ def extract_symptom_slots(conversation_history: list, model_name: str = "qwen2.5
             format="json",
             think=False,
             keep_alive="24h",
-            options={"num_ctx": 1024, "temperature": 0.1, "num_predict": 120},
+            options={"num_ctx": 3072, "temperature": 0.1, "num_predict": 120},
         )
         raw_text = response["message"]["content"]
         parsed = json.loads(raw_text)

@@ -2,11 +2,10 @@
 Edge-Native Hospital Context Router (Clinical Lexical-Semantic Router).
 
 Provides sub-millisecond (< 1.0ms) CPU-only selective retrieval of relevant
-hospital rooms and departments based on patient symptom statements.
+hospital rooms, sub-room bays, and wards based on patient symptom statements.
 
-Prevents context bloat and prefill latency spikes on edge GPUs by retrieving
-only the Top-1 (or Top-2) relevant rooms (~35 tokens) instead of dumping
-the entire hospital catalog into the LLM prompt.
+Selects the Top-3 candidate rooms so the LLM can evaluate clinical nuances
+and choose the most appropriate destination without context bloat or GPU VRAM impact.
 """
 
 import json
@@ -64,6 +63,9 @@ CLINICAL_SYNONYMS = {
     "baby": ["pediatric", "child", "infant"],
     "child": ["pediatric", "toddler", "infant"],
     "toddler": ["pediatric", "child"],
+    "cold": ["ent", "common cold", "runny nose", "mucus"],
+    "mucus": ["ent", "throat", "congestion", "cough"],
+    "congestion": ["ent", "sinus", "respiratory"],
 }
 
 STOPWORDS = {
@@ -77,17 +79,24 @@ STOPWORDS = {
     "there", "when", "where", "why", "how", "all", "any", "both", "each", "few", "more",
     "most", "other", "some", "such", "no", "nor", "not", "only", "own", "same", "so",
     "than", "too", "very", "s", "t", "can", "will", "just", "don", "should", "now",
-    "get", "got", "please", "could", "would", "like", "tell", "water", "glass"
+    "get", "got", "please", "could", "would", "like", "tell", "water", "glass",
+    "car", "park", "parking", "desk", "cafeteria", "coffee", "morning", "afternoon", "evening", "hello", "hi", "hey",
+    "open", "time", "close", "closed", "hour", "hours", "schedule"
 }
 
 _WORD_PATTERN = re.compile(r"[a-z0-9]+")
-_ROOM_NUMBER_REGEX = re.compile(r"(?:room|rm|bay|cabin)\s*(?:no\.?|#)?\s*([0-9]+[a-z]?)", re.IGNORECASE)
+_ROOM_NUMBER_REGEX = re.compile(
+    r"(?:room|rm|bay|cabin)\s*(?:no\.?|#)?\s*([0-9]+(?:-[0-9a-z]+|[a-z])?)",
+    re.IGNORECASE,
+)
 
 
 @dataclass
 class HospitalRoomMatch:
     room_id: str
+    ward: str
     room_number: str
+    sub_room_name: str
     department: str
     floor: str
     acuity_tier: str
@@ -97,14 +106,14 @@ class HospitalRoomMatch:
 
 class HospitalRouter:
     """
-    Sub-millisecond clinical room router for edge LLMs.
+    Sub-millisecond clinical room & ward router for edge LLMs.
     """
 
     def __init__(
         self,
         directory_path: Optional[str] = None,
-        match_threshold: float = 0.30,
-        top_k: int = 1,
+        match_threshold: float = 0.25,
+        top_k: int = 3,
     ):
         self.match_threshold = match_threshold
         self.top_k = top_k
@@ -113,7 +122,6 @@ class HospitalRouter:
         self.emergency_room: Optional[HospitalRoomMatch] = None
 
         if directory_path is None:
-            # Default to bundled data directory
             base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
             directory_path = os.path.join(base_dir, "eval", "data", "hospital_directory.json")
 
@@ -146,29 +154,41 @@ class HospitalRouter:
             return
 
         self.rooms = data.get("rooms", [])
-        self.valid_room_numbers = {r["room_number"].strip() for r in self.rooms if "room_number" in r}
 
-        # Precompute room token sets and BM25 document frequencies
+        # Store both exact room strings (e.g. "120-A") and base numbers (e.g. "120")
+        self.valid_room_numbers = set()
+        for r in self.rooms:
+            rm = r.get("room_number", "").strip()
+            if rm:
+                self.valid_room_numbers.add(rm.upper())
+                self.valid_room_numbers.add(rm.lower())
+                base = rm.split("-")[0].strip()
+                if base:
+                    self.valid_room_numbers.add(base.upper())
+                    self.valid_room_numbers.add(base.lower())
+
         self._room_profiles = []
         doc_count = len(self.rooms)
         term_doc_freq = {}
 
         for room in self.rooms:
-            # Combine department, floor, and keywords
-            text_corpus = f"{room.get('department', '')} {room.get('floor', '')} " + " ".join(
-                room.get("clinical_keywords", [])
+            text_corpus = (
+                f"{room.get('ward', '')} {room.get('sub_room_name', '')} {room.get('department', '')} "
+                f"{room.get('floor', '')} " + " ".join(room.get("clinical_keywords", []))
             )
             raw_tokens = self._tokenize(text_corpus, filter_stopwords=True)
             expanded_tokens = self._expand_tokens(raw_tokens)
 
-            # Record emergency room if found
-            if "emergency" in room.get("acuity_tier", "").lower() or room.get("room_number") == "10":
+            # Record default emergency room if found
+            if "emergency" in room.get("acuity_tier", "").lower() or room.get("room_number") in ("10", "10-A"):
                 if self.emergency_room is None:
                     self.emergency_room = HospitalRoomMatch(
                         room_id=room.get("room_id", "emergency"),
-                        room_number=room.get("room_number", "10"),
-                        department=room.get("department", "Emergency Resuscitation"),
-                        floor=room.get("floor", "Ground Floor"),
+                        ward=room.get("ward", "Ward 0 (Emergency Complex)"),
+                        room_number=room.get("room_number", "10-A"),
+                        sub_room_name=room.get("sub_room_name", "Resuscitation Bay 1"),
+                        department=room.get("department", "Emergency Medicine"),
+                        floor=room.get("floor", "Ground Floor, Red Bay"),
                         acuity_tier=room.get("acuity_tier", "Emergency"),
                         routing_guidance=room.get("routing_guidance", "Immediate Emergency Evaluation"),
                         score=1.0,
@@ -182,17 +202,15 @@ class HospitalRouter:
             }
             self._room_profiles.append(profile)
 
-            # Document frequencies for IDF
             for token in set(expanded_tokens):
                 term_doc_freq[token] = term_doc_freq.get(token, 0) + 1
 
-        # Calculate standard smoothed IDF
         self._idf = {}
         for term, df in term_doc_freq.items():
             self._idf[term] = math.log(1.0 + (doc_count - df + 0.5) / (df + 0.5))
 
         log.info(
-            "HospitalRouter loaded %d rooms from %s (Emergency Room: %s)",
+            "HospitalRouter loaded %d rooms/bays from %s (Emergency Room: %s)",
             len(self.rooms),
             self.directory_path,
             self.emergency_room.room_number if self.emergency_room else "None",
@@ -205,8 +223,7 @@ class HospitalRouter:
         threshold: Optional[float] = None,
     ) -> List[HospitalRoomMatch]:
         """
-        Sub-millisecond query routing.
-        Returns top matching rooms if score >= threshold, else [] (zero context bloat).
+        Sub-millisecond query routing returning Top-K (default 3) candidate rooms.
         """
         if not self._room_profiles or not transcript:
             return []
@@ -228,26 +245,25 @@ class HospitalRouter:
             room_tokens = profile["tokens"]
             keywords = profile["keywords"]
 
-            # 1. Exact phrase matching bonus (e.g. "chest pain", "high fever")
             phrase_bonus = 0.0
             for kw in keywords:
                 if kw in transcript_lower:
-                    phrase_bonus += 0.45
+                    phrase_bonus += 0.50
 
-            # 2. IDF-weighted token overlap
             overlap = query_expanded.intersection(room_tokens)
             if not overlap and phrase_bonus == 0.0:
                 continue
 
             overlap_score = sum(self._idf.get(t, 0.5) for t in overlap)
-            # Normalize by query length
             normalized_score = (overlap_score / max(len(query_tokens), 1)) + phrase_bonus
 
             if normalized_score >= thresh:
                 scored_matches.append(
                     HospitalRoomMatch(
                         room_id=room.get("room_id", ""),
+                        ward=room.get("ward", ""),
                         room_number=room.get("room_number", ""),
+                        sub_room_name=room.get("sub_room_name", ""),
                         department=room.get("department", ""),
                         floor=room.get("floor", ""),
                         acuity_tier=room.get("acuity_tier", "Routine"),
@@ -261,19 +277,26 @@ class HospitalRouter:
 
     def format_routing_hint(self, matches: List[HospitalRoomMatch]) -> str:
         """
-        Formats matches into a compact, spoken-friendly prompt hint (< 45 tokens).
+        Formats matches into candidate options (Top 3) for the LLM to choose between.
         """
         if not matches:
             return ""
 
-        top = matches[0]
-        return (
-            f"[HOSPITAL ROUTING REFERENCE]\n"
-            f"- Matched Clinic: Room {top.room_number} ({top.floor}) - {top.department}\n"
-            f"- Guidance: If you have gathered sufficient clinical details or if the presentation warrants referral, "
-            f"guide the patient to Room {top.room_number}. If you need to clarify symptom duration, severity, "
-            f"or associated factors first, do so before directing them. Never direct to an unlisted room."
+        lines = ["[HOSPITAL ROUTING REFERENCE - CANDIDATE CLINICS & ROOMS]:"]
+        for i, m in enumerate(matches, 1):
+            ward_info = f"{m.ward}, " if m.ward else ""
+            sub_info = f" ({m.sub_room_name})" if m.sub_room_name else ""
+            lines.append(
+                f"{i}. Room {m.room_number}{sub_info} [{ward_info}{m.floor}] - {m.department} (Acuity: {m.acuity_tier})"
+            )
+            if m.routing_guidance:
+                lines.append(f"   Indication: {m.routing_guidance}")
+
+        lines.append(
+            "- Nurse Guidance: Direct patient to the best candidate stating both Ward and Room (e.g., Ward 5, Room 15-A). "
+            "Answer follow-up ward/floor questions directly. Never use unlisted rooms."
         )
+        return "\n".join(lines)
 
     def extract_room_numbers_from_text(self, text: str) -> List[str]:
         """Extracts any room numbers mentioned in generated text."""
@@ -281,7 +304,8 @@ class HospitalRouter:
 
     def is_valid_room(self, room_number: str) -> bool:
         """Returns True if the room number exists in the hospital directory."""
-        return room_number.strip() in self.valid_room_numbers
+        rn = room_number.strip().upper()
+        return (rn in self.valid_room_numbers) or (rn.split("-")[0] in self.valid_room_numbers)
 
     def sanitize_unauthorized_rooms(self, response_text: str) -> str:
         """
@@ -293,7 +317,6 @@ class HospitalRouter:
         for room in found_rooms:
             if not self.is_valid_room(room):
                 log.warning("Intercepted hallucinated room number '%s' in SLM output!", room)
-                # Replace hallucinated room with 'the clinic reception desk'
                 sanitized = re.sub(
                     rf"\b(?:room|rm|bay|cabin)\s*(?:no\.?|#)?\s*{re.escape(room)}\b",
                     "the front reception desk",

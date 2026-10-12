@@ -27,6 +27,8 @@ class SLMEngine:
         """
         self.cfg = config
         self.model_name = config.get("model_name", "qwen2.5:1.5b-instruct")
+        self.num_ctx = config.get("num_ctx", 3072)
+        self.max_history_messages = config.get("max_history_messages", 24)
         self._cancel_flag = False
 
         self.hospital_router = None
@@ -58,6 +60,12 @@ class SLMEngine:
         hint = routing_hint
         if hint is None and self.hospital_router is not None:
             matches = self.hospital_router.match(transcript)
+            # If current turn is a follow-up with no clinical symptoms (e.g. "which ward?", "where is that?"),
+            # search against recent conversation history to keep the routing context active
+            if not matches and conversation_history:
+                recent_user_text = " ".join([t.get("text", "") for t in conversation_history if t.get("role") == "user"])
+                if recent_user_text:
+                    matches = self.hospital_router.match(f"{recent_user_text} {transcript}")
             hint = self.hospital_router.format_routing_hint(matches)
 
         system_content = SYSTEM_PROMPT
@@ -70,8 +78,8 @@ class SLMEngine:
         if history and history[-1].get("text") == transcript:
             history = history[:-1]
 
-        # Sliding window: keep only the last 4 turns to keep context lightweight and avoid VRAM exhaustion
-        recent_history = history[-4:]
+        # Sliding window: keep up to max_history_messages (default 24 = 12 complete conversation rounds)
+        recent_history = history[-self.max_history_messages:]
         for turn in recent_history:
             role = "user" if turn["role"] == "user" else "assistant"
             messages.append({"role": role, "content": turn["text"]})
@@ -96,7 +104,7 @@ class SLMEngine:
             think=False,
             keep_alive="24h",
             options={
-                "num_ctx": 1024,
+                "num_ctx": self.num_ctx,
                 "temperature": self.cfg.get("temperature", 0.3),
                 "num_predict": max_tokens,
             },

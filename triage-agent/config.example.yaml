@@ -17,6 +17,8 @@ slm:
   model_name: "qwen3.5:4b"
   max_new_tokens: 200
   temperature: 0.3
+  num_ctx: 3072                         # context window allowed for SLM (3000 range)
+  max_history_messages: 24              # keep up to 12 full user-nurse dialogue rounds
 
 tts:
   backend: "piper"
@@ -41,8 +43,8 @@ speculative:
 hospital:
   enabled: true                     # sub-millisecond selective room routing
   directory_path: "eval/data/hospital_directory.json"
-  match_threshold: 0.30
-  top_k: 1
+  match_threshold: 0.25
+  top_k: 3
 
 logging:
   level: "INFO"

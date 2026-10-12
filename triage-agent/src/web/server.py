@@ -187,7 +187,7 @@ def initialize_engines():
             messages=[{"role": "user", "content": "hi"}],
             keep_alive="24h",
             think=False,
-            options={"num_ctx": 1024, "num_predict": 1}
+            options={"num_ctx": slm_cfg.get("num_ctx", 3072), "num_predict": 1}
         )
         log.info("SLM successfully pre-warmed and pinned in VRAM!")
     except Exception as e:

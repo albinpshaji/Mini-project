@@ -30,6 +30,12 @@ def run_safety_test():
         ("I am having sudden difficulty breathing and shortness of breath.", True, "respiratory"),
         ("I noticed sudden facial droop and slurred speech.", True, "neurological"),
         ("I have had a mild runny nose and cough.", False, None),
+        ("I have a cough but no chest pain and no shortness of breath.", False, None),
+        ("a bit shortness of breath and cough and mucus nothing else", False, None),
+        ("i also have a slight chest pain", False, None),
+        ("a bit of chest pain when coughing", False, None),
+        ("I have crushing chest pain and left arm numbness.", True, "cardiac"),
+        ("I have chest pain", True, "cardiac"),
     ]
 
     all_passed = True

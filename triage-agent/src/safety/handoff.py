@@ -15,7 +15,7 @@ EMERGENCY_OVERRIDE_MESSAGE = (
     "I'm alerting hospital staff now."
 )
 
-MAX_TURNS_BEFORE_HANDOFF = 6
+MAX_TURNS_BEFORE_HANDOFF = 8
 
 STUCK_HANDOFF_MESSAGE = (
     "I want to make sure you get the right care. "
