@@ -1,0 +1,3 @@
+case_id,category,expected_ktas,predicted_ktas,status,committed,vad_silence_ms,asr_final_ms,slm_prefill_ms,slm_gen_ms,guardrail_tools_ms,tts_first_chunk_ms,glass_to_glass_total_ms,dosage_leaked,diagnostic_overreach
+cardiac_01,cardiac,2,2,SEQUENTIAL,False,0.04,0.01,0.0,3298.91,0.2,0.01,3299.16,False,False
+cardiac_02,cardiac,1,2,SEQUENTIAL,False,0.0,0.0,0.0,3165.03,0.08,0.0,3165.12,False,False

@@ -1,0 +1,63 @@
+{
+  "run_id": "20260928_104022_eval_speculative_speculative",
+  "timestamp": "2026-09-28T10:41:08.033418",
+  "git_commit": "HEAD",
+  "architecture": "speculative_eval_speculative",
+  "model": "qwen3.5:4b",
+  "cases_evaluated": 10,
+  "stages_ms": {
+    "1_vad_silence_wait": {
+      "mean": 0.0
+    },
+    "2_final_asr_pass": {
+      "mean": 0.0
+    },
+    "3_slm_prefill": {
+      "mean": 751.1
+    },
+    "4_slm_generation": {
+      "mean": 2243.9
+    },
+    "5_tools_guardrail": {
+      "mean": 0.1
+    },
+    "6_tts_synthesis": {
+      "mean": 0.0
+    }
+  },
+  "latency": {
+    "glass_to_glass_mean_ms": 2995.0,
+    "glass_to_glass_p50_ms": 3005.5,
+    "glass_to_glass_p90_ms": 4831.3,
+    "glass_to_glass_p99_ms": 4879.1,
+    "raw_latencies_ms": [
+      909.62,
+      2826.47,
+      3296.77,
+      4879.05,
+      1957.24,
+      3184.55,
+      4401.31,
+      2451.7,
+      3854.26,
+      2189.44
+    ]
+  },
+  "speculative_efficiency": {
+    "commit_rate_percent": 40.0,
+    "false_commit_count": 0,
+    "effective_speedup_factor": 1.06
+  },
+  "clinical_safety": {
+    "ktas_quadratic_weighted_kappa": 0.7899,
+    "under_triage_rate_percent": 0.0,
+    "over_triage_rate_percent": 33.33,
+    "safety_invariant_passed": true,
+    "dosage_leakage_rate_percent": 0.0
+  },
+  "hardware": {
+    "peak_vram_mb": 3077.0
+  },
+  "summary_json_path": "eval/results/runs/20260928_104022_eval_speculative_speculative/summary.json",
+  "raw_csv_path": "eval/results/runs/20260928_104022_eval_speculative_speculative/raw_metrics.csv"
+}

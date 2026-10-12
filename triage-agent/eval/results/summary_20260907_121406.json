@@ -1,0 +1,17 @@
+{
+  "timestamp": "2026-09-07T12:14:06.256422",
+  "model": "qwen3.5:4b",
+  "divergence_threshold": 0.7,
+  "num_cases": 4,
+  "total_commits": 2,
+  "total_rollbacks": 2,
+  "commit_rate_percent": 50.0,
+  "false_commits": 0,
+  "mean_sequential_ms": 4530.9,
+  "median_sequential_ms": 2658.1,
+  "mean_speculative_ms": 2443.7,
+  "median_speculative_ms": 2100.4,
+  "mean_committed_ms": 1835.1,
+  "mean_rollback_ms": 3052.2,
+  "overall_latency_reduction_percent": 46.1
+}

@@ -1,0 +1,48 @@
+# Research Papers (Excluded from repository)
+papers/
+*.pdf
+
+# Models & Large Binaries
+models/
+*.onnx
+*.onnx.json
+*.gguf
+*.bin
+*.pt
+
+# Python & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+*.log
+server.log
+experiments/logs/
+
+# Frontend Dependencies & Build Output
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Git Sub-repo Backups
+.git_backup/
+**/.git_backup/
+
+# Local Machine-Specific Configuration
+config.yaml
+**/config.yaml
+
+# OS & Editor Files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+.ipynb_checkpoints/
+*.zip
