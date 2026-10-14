@@ -15,7 +15,7 @@ from piper import PiperVoice
 
 
 class TTSEngine:
-    def __init__(self, config: dict):
+    def __init__(self, config: dict, guardrail=None):
         """
         config: the \'tts\' section of config.yaml
         """
@@ -27,6 +27,10 @@ class TTSEngine:
         self._playback_thread = None
         self._is_active_speaking = False
         self.on_audio_chunk = None
+
+        # Feature C: Pre-TTS Real-Time Streaming Guardrail
+        from src.safety.streaming_guardrail import StreamingGuardrail
+        self.guardrail = guardrail if guardrail is not None else StreamingGuardrail()
 
     def cancel(self):
         """Stop playback ASAP. Safe to call even if nothing is playing."""
@@ -75,6 +79,9 @@ class TTSEngine:
         """Synthesizes and plays a single sentence/sub-clause chunk immediately."""
         if self._cancel_flag.is_set():
             return
+        if self.guardrail:
+            res = self.guardrail.guard_chunk(sentence)
+            sentence = res.text
         clean = self._strip_markdown(sentence)
         if not clean.strip():
             return
@@ -165,6 +172,8 @@ class TTSEngine:
 
     def _synthesize_chunks(self, text: str):
         """Yields audio chunks split by sub-clauses for low-latency streaming playback."""
+        if self.guardrail:
+            text = self.guardrail.guard_chunk(text).text
         chunks = self._split_sub_clauses(text)
         for chunk in chunks:
             if not chunk.strip():
