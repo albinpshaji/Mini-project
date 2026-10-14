@@ -2,8 +2,8 @@
   "mode": "candidate",
   "model_name": "qwen3.5:4b",
   "total_cases": 15,
-  "mean_latency_ms": 3692.4,
-  "median_latency_ms": 3358.56,
+  "mean_latency_ms": 3187.62,
+  "median_latency_ms": 3162.13,
   "schema_conformance_percent": 100.0,
   "parse_error_rate_percent": 0.0,
   "red_flag_accuracy_percent": 100.0,
@@ -14,7 +14,7 @@
     {
       "id": "cardiac_01",
       "category": "cardiac",
-      "latency_ms": 9385.976864999975,
+      "latency_ms": 3208.730217000266,
       "valid_schema": true,
       "raw_error": null,
       "pred_red_flag": true,
@@ -27,7 +27,7 @@
     {
       "id": "cardiac_02",
       "category": "cardiac",
-      "latency_ms": 2935.6324000000313,
+      "latency_ms": 3013.658862999364,
       "valid_schema": true,
       "raw_error": null,
       "pred_red_flag": true,
@@ -40,7 +40,7 @@
     {
       "id": "cardiac_03",
       "category": "cardiac",
-      "latency_ms": 3360.5673339998248,
+      "latency_ms": 3183.3716470009676,
       "valid_schema": true,
       "raw_error": null,
       "pred_red_flag": true,
@@ -53,7 +53,7 @@
     {
       "id": "cardiac_04",
       "category": "cardiac",
-      "latency_ms": 3091.9102799998655,
+      "latency_ms": 3073.7798949994612,
       "valid_schema": true,
       "raw_error": null,
       "pred_red_flag": true,
@@ -66,7 +66,7 @@
     {
       "id": "cardiac_05",
       "category": "cardiac",
-      "latency_ms": 3410.8832410001924,
+      "latency_ms": 3102.3925310000777,
       "valid_schema": true,
       "raw_error": null,
       "pred_red_flag": true,
@@ -79,7 +79,7 @@
     {
       "id": "cardiac_06",
       "category": "cardiac",
-      "latency_ms": 3029.9424159993578,
+      "latency_ms": 2870.1389050002035,
       "valid_schema": true,
       "raw_error": null,
       "pred_red_flag": false,
@@ -92,7 +92,7 @@
     {
       "id": "cardiac_07",
       "category": "cardiac",
-      "latency_ms": 3301.7478960000517,
+      "latency_ms": 3162.1324509997066,
       "valid_schema": true,
       "raw_error": null,
       "pred_red_flag": false,
@@ -105,7 +105,7 @@
     {
       "id": "cardiac_08",
       "category": "cardiac",
-      "latency_ms": 3183.5788719999982,
+      "latency_ms": 2973.2647359996918,
       "valid_schema": true,
       "raw_error": null,
       "pred_red_flag": false,
@@ -118,7 +118,7 @@
     {
       "id": "cardiac_09",
       "category": "cardiac",
-      "latency_ms": 3358.564969999861,
+      "latency_ms": 3254.0170699994633,
       "valid_schema": true,
       "raw_error": null,
       "pred_red_flag": false,
@@ -131,7 +131,7 @@
     {
       "id": "cardiac_10",
       "category": "cardiac",
-      "latency_ms": 3446.0961889999453,
+      "latency_ms": 3128.4550669988676,
       "valid_schema": true,
       "raw_error": null,
       "pred_red_flag": true,
@@ -144,7 +144,7 @@
     {
       "id": "cardiac_11",
       "category": "cardiac",
-      "latency_ms": 3547.2690850001527,
+      "latency_ms": 3213.7504769998486,
       "valid_schema": true,
       "raw_error": null,
       "pred_red_flag": false,
@@ -157,7 +157,7 @@
     {
       "id": "cardiac_12",
       "category": "cardiac",
-      "latency_ms": 3446.0513329995592,
+      "latency_ms": 3644.9129940010607,
       "valid_schema": true,
       "raw_error": null,
       "pred_red_flag": true,
@@ -170,7 +170,7 @@
     {
       "id": "resp_01",
       "category": "respiratory",
-      "latency_ms": 3371.8903859999045,
+      "latency_ms": 3468.614998000703,
       "valid_schema": true,
       "raw_error": null,
       "pred_red_flag": true,
@@ -183,7 +183,7 @@
     {
       "id": "resp_02",
       "category": "respiratory",
-      "latency_ms": 3350.634008999805,
+      "latency_ms": 3392.6833139994415,
       "valid_schema": true,
       "raw_error": null,
       "pred_red_flag": true,
@@ -196,7 +196,7 @@
     {
       "id": "resp_03",
       "category": "respiratory",
-      "latency_ms": 3165.2706180002497,
+      "latency_ms": 3124.3570460010233,
       "valid_schema": true,
       "raw_error": null,
       "pred_red_flag": true,
