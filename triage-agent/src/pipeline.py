@@ -35,6 +35,9 @@ class SequentialTriagePipeline:
 
         self.slm = SLMEngine(self.cfg["slm"])
         self.tts = TTSEngine(self.cfg["tts"])
+        # Feature C: Pre-TTS Real-Time Streaming Guardrail
+        from src.safety.streaming_guardrail import StreamingGuardrail
+        self.guardrail = StreamingGuardrail()
         self.conversation_history = []
         self.turn_count = 0
         self.latest_slots = None
@@ -160,7 +163,11 @@ class SequentialTriagePipeline:
             self.tts.speak(response, blocking=True)
         else:
             token_stream = self.slm.generate_stream(transcript, self.conversation_history)
-            response = self.tts.speak_stream(token_stream, on_first_audio_callback=_on_first_audio)
+            guarded_stream = self.guardrail.guard_token_stream(token_stream, user_prompt=transcript)
+            response = self.tts.speak_stream(guarded_stream, on_first_audio_callback=_on_first_audio)
+            guard_res = self.guardrail.guard_response(response, user_prompt=transcript)
+            if guard_res.intercepted:
+                response = guard_res.text
             if contains_fabricated_placeholder(response):
                 log.warning("FABRICATION DETECTED in SLM response -- replacing with safe fallback. Original: %r", response)
                 response = FABRICATION_FALLBACK_MESSAGE

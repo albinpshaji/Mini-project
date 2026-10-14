@@ -100,6 +100,7 @@ speculator: Optional[Speculator] = None
 piper_voice: Optional[PiperVoice] = None
 biomarker_coprocessor: Optional[AcousticBiomarkerCoProcessor] = None
 resource_scheduler: Optional[ResourceScheduler] = None
+streaming_guardrail: Optional[Any] = None
 
 # Audio cache for generated TTS audio
 audio_cache: Dict[str, bytes] = {}
@@ -142,9 +143,13 @@ def get_lan_ip() -> str:
 
 def initialize_engines():
     """Initializes models upon startup."""
-    global slm_engine, whisper_model, whisper_partial, speculator, piper_voice, biomarker_coprocessor, resource_scheduler
+    global slm_engine, whisper_model, whisper_partial, speculator, piper_voice, biomarker_coprocessor, resource_scheduler, streaming_guardrail
     
     log.info("Initializing OmniSpec-Triage AI Engines...")
+    
+    # 0. Pre-TTS Real-Time Streaming Guardrail (Feature C)
+    from src.safety.streaming_guardrail import StreamingGuardrail
+    streaming_guardrail = StreamingGuardrail()
     
     # 1. Resource scheduler
     resource_scheduler = ResourceScheduler(cfg.get("pipeline", {}))
@@ -244,9 +249,12 @@ def synthesize_speech_wav(text: str) -> tuple[bytes, float]:
     """
     Synthesizes speech using Piper and returns (wav_bytes, duration_seconds).
     """
-    global piper_voice
+    global piper_voice, streaming_guardrail
     if piper_voice is None:
         raise RuntimeError("Piper voice model not loaded.")
+        
+    if streaming_guardrail is not None:
+        text = streaming_guardrail.guard_chunk(text).text
         
     sample_rate = piper_voice.config.sample_rate
     chunks = []
