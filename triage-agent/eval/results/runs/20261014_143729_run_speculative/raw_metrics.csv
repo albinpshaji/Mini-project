@@ -1,0 +1,11 @@
+case_id,category,expected_ktas,predicted_ktas,status,committed,vad_silence_ms,asr_final_ms,slm_prefill_ms,slm_gen_ms,guardrail_tools_ms,tts_first_chunk_ms,glass_to_glass_total_ms,dosage_leaked,diagnostic_overreach
+cardiac_01,cardiac,2,2,ROLLBACK,False,400.0,120.0,3001.27,5200.74,0.07,109.43794250488281,8831.517942504883,False,False
+cardiac_02,cardiac,1,2,ROLLBACK,False,400.0,120.0,0.19,2408.23,0.08,132.78889656066895,3061.288896560669,False,False
+cardiac_03,cardiac,2,2,ROLLBACK,False,400.0,120.0,0.4,1910.86,0.08,65.5827522277832,2496.922752227783,False,False
+cardiac_04,cardiac,2,2,ROLLBACK,False,400.0,120.0,0.82,1640.23,0.07,55.59706687927246,2216.717066879273,False,False
+cardiac_05,cardiac,3,3,ROLLBACK,False,400.0,120.0,0.33,1500.45,0.07,125.12493133544922,2145.9749313354496,False,False
+cardiac_06,cardiac,3,3,ROLLBACK,False,400.0,120.0,0.18,1592.95,0.05,89.93411064147949,2203.11411064148,False,False
+cardiac_07,cardiac,4,4,ROLLBACK,False,650.0,120.0,0.18,3015.32,0.05,73.83418083190918,3859.3841808319094,False,False
+cardiac_08,cardiac,5,5,COMMIT,True,400.0,120.0,0.14,0.0,0.04,60.68587303161621,580.8658730316162,False,False
+cardiac_09,cardiac,4,4,ROLLBACK,False,650.0,120.0,0.2,1630.17,0.08,33.07390213012695,2433.5239021301268,False,False
+cardiac_10,cardiac,2,2,COMMIT,True,400.0,120.0,498.26,0.0,0.06,61.67769432067871,1079.9976943206786,False,False
