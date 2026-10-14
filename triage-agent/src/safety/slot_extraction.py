@@ -9,6 +9,7 @@ import json
 import ollama
 from dataclasses import dataclass, asdict
 from typing import Optional, List
+from src.safety.clinical_acuity import calculate_ktas_acuity
 
 
 SLOT_SCHEMA_DESCRIPTION = """Extract structured information from this patient triage conversation.
@@ -34,6 +35,8 @@ class SymptomSlots:
     red_flag_present: bool = False
     recommended_department: Optional[str] = None
     confidence: str = "low"
+    acuity_level: Optional[int] = None
+    clinical_rationale: Optional[str] = None
     _raw_parse_error: Optional[str] = None
 
     def __post_init__(self):
@@ -54,7 +57,7 @@ def _conversation_to_text(conversation_history: list) -> str:
     return "\n".join(lines)
 
 
-def extract_symptom_slots(conversation_history: list, model_name: str = "qwen2.5:1.5b-instruct") -> SymptomSlots:
+def extract_symptom_slots(conversation_history: list, model_name: str = "qwen3.5:4b") -> SymptomSlots:
     conversation_text = _conversation_to_text(conversation_history)
     prompt = f"{SLOT_SCHEMA_DESCRIPTION}\n\nConversation:\n{conversation_text}"
 
@@ -70,14 +73,30 @@ def extract_symptom_slots(conversation_history: list, model_name: str = "qwen2.5
         raw_text = response["message"]["content"]
         parsed = json.loads(raw_text)
 
+        chief = parsed.get("chief_complaint")
+        sev = parsed.get("severity")
+        rf = bool(parsed.get("red_flag_present", False))
+        assoc = parsed.get("associated_symptoms", []) or []
+        dept = parsed.get("recommended_department")
+
+        # Deterministic KTAS Acuity Engine (Menon & Fouad 2024 / Day 16 Master Plan)
+        ktas = calculate_ktas_acuity(
+            complaint_text=f"{chief or ''} {conversation_text}",
+            severity=sev,
+            red_flags=assoc if rf else []
+        )
+
         return SymptomSlots(
-            chief_complaint=parsed.get("chief_complaint"),
+            chief_complaint=chief,
             duration=parsed.get("duration"),
-            severity=parsed.get("severity"),
-            associated_symptoms=parsed.get("associated_symptoms", []) or [],
-            red_flag_present=bool(parsed.get("red_flag_present", False)),
-            recommended_department=parsed.get("recommended_department"),
-            confidence=parsed.get("confidence", "low"),
+            severity=sev,
+            associated_symptoms=assoc,
+            red_flag_present=rf or (ktas.acuity_level <= 2 and ktas.escalate_to_staff),
+            recommended_department=dept or ktas.recommended_department,
+            confidence=parsed.get("confidence", "medium"),
+            acuity_level=ktas.acuity_level,
+            clinical_rationale=ktas.clinical_rationale,
         )
     except (json.JSONDecodeError, KeyError, TypeError) as e:
         return SymptomSlots(confidence="low", _raw_parse_error=str(e))
+

@@ -22,9 +22,10 @@ RED_FLAG_PATTERNS = {
     "cardiac": [
         r"\bchest pain\b",
         r"\bchest (feels|feeling) (tight|heavy|crushing)\b",
-        r"\b(crushing|squeezing) (chest|pain)\b",
         r"\b(pain|radiat\w*|goes|shooting) (in|down|to|into) (my )?(left )?arm\b",
         r"\bheart (racing|pounding) and (dizzy|faint)\b",
+        r"\bheart (is )?(racing|pounding)\b.{0,30}\b\d{2,3}\s*(bpm|beats per minute)?\b",
+        r"\b(1[2-9]\d|[2-9]\d\d)\s*(bpm|beats per minute)\b",
     ],
     "respiratory": [
         r"\b(can'?t|cannot) breathe\b",
