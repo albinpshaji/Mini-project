@@ -23,6 +23,7 @@ from src.safety.clinical_schema import (
     get_clinical_triage_json_schema,
     generate_clinical_triage_gbnf
 )
+from src.safety.clinical_acuity import calculate_ktas_acuity
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +87,19 @@ def extract_clinical_triage_gcd(
             return None, "Empty response from grammar decoder", elapsed
 
         record = ClinicalTriageRecord.model_validate_json(raw_text)
+
+        # Enforce deterministic clinical safety precedence (Master Plan Innovation 10 / Day 16)
+        ktas = calculate_ktas_acuity(
+            complaint_text=f"{record.chief_complaint} {dialogue_text}",
+            severity=record.pain_severity,
+            red_flags=record.matched_red_flags if record.red_flag_present else []
+        )
+        if ktas.acuity_level < record.acuity_level:
+            record.acuity_level = ktas.acuity_level
+            record.clinical_rationale = ktas.clinical_rationale
+            if ktas.escalate_to_staff:
+                record.red_flag_present = True
+
         return record, None, elapsed
 
     except Exception as e:
