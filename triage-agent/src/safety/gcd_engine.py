@@ -39,8 +39,8 @@ def extract_clinical_triage_gcd(
     conversation_history: List[Dict[str, str]],
     model_name: str = "qwen3.5:4b",
     temperature: float = 0.1,
-    num_ctx: int = 3072,
-    num_predict: int = 250,
+    num_ctx: int = 2048,
+    num_predict: int = 100,
 ) -> Tuple[Optional[ClinicalTriageRecord], Optional[str], float]:
     """
     Executes Grammar-Constrained Decoding against the dialogue history.
@@ -59,6 +59,7 @@ def extract_clinical_triage_gcd(
         "- acuity_level 3 (Urgent): Moderate, stable symptoms requiring evaluation or multiple resources.\n"
         "- acuity_level 4 (Less Urgent): Mild stable complaints requiring a single evaluation or minor care.\n"
         "- acuity_level 5 (Non-Urgent): Minor routine concerns or cold symptoms.\n\n"
+        "Keep clinical_rationale strictly under 15 words.\n\n"
         f"Encounter Transcript:\n{dialogue_text}"
     )
 

@@ -58,7 +58,7 @@ class ClinicalTriageRecord(BaseModel):
     )
     clinical_rationale: str = Field(
         ...,
-        description="Concise medical reasoning supporting the assigned acuity tier and department"
+        description="Single concise sentence medical reasoning, strictly under 15 words"
     )
 
     def to_legacy_slots_dict(self) -> Dict[str, Any]:
