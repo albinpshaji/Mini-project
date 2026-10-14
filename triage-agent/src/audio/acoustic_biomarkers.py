@@ -97,8 +97,8 @@ class AcousticBiomarkerCoProcessor:
         speech_ratio = float(speech_frames / (num_frames + 1e-6))
         total_duration_s = len(samples) / self.sample_rate
 
-        # Dyspnea detection: R_pause < 0.35 over >= 1.5s audio indicates frequent gasping pauses
-        dyspnea = bool(total_duration_s >= 1.2 and speech_ratio < self.dyspnea_pause_threshold)
+        # Dyspnea detection: R_pause < 0.35 over >= 2.0s audio indicates frequent gasping pauses
+        dyspnea = bool(total_duration_s >= 2.0 and speech_ratio < self.dyspnea_pause_threshold)
 
         # 2. Spectral Band Analysis (Wheezing / Stridor Detection)
         # Use Welch PSD on speech frames

@@ -27,10 +27,18 @@ import {
 } from 'lucide-react';
 
 /* ==========================================================================
-   VoiceOrb Component - ChatGPT Live Style Organic Reactive Audio Orb
+   VoiceOrb Component - Minimalist Precision Audio Indicator
    ========================================================================== */
-function VoiceOrb({ state, audioLevel, isEmergency }) {
+function VoiceOrb({ state, analyserRef, audioLevel, isEmergency, isUserSpeaking }) {
   const canvasRef = useRef(null);
+  const stateRef = useRef(state);
+  stateRef.current = state;
+  const isEmergencyRef = useRef(isEmergency);
+  isEmergencyRef.current = isEmergency;
+  const audioLevelRef = useRef(audioLevel);
+  audioLevelRef.current = audioLevel;
+  const isUserSpeakingRef = useRef(isUserSpeaking);
+  isUserSpeakingRef.current = isUserSpeaking;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -38,9 +46,12 @@ function VoiceOrb({ state, audioLevel, isEmergency }) {
     const ctx = canvas.getContext('2d');
     let animId;
     let phase = 0;
+    let smoothAmp = 0;
+    const freqData = new Uint8Array(32);
 
     const render = () => {
-      phase += 0.035;
+      animId = requestAnimationFrame(render);
+      phase += 0.05;
       const width = canvas.width;
       const height = canvas.height;
       const cx = width / 2;
@@ -48,120 +59,236 @@ function VoiceOrb({ state, audioLevel, isEmergency }) {
 
       ctx.clearRect(0, 0, width, height);
 
-      // Dynamic color palette based on active conversational state
-      let color1, color2, color3, glowColor, midGlowColor;
-      if (isEmergency) {
-        color1 = 'rgba(239, 68, 68, 0.95)';
-        color2 = 'rgba(220, 38, 38, 0.8)';
-        color3 = 'rgba(254, 202, 202, 0.5)';
-        glowColor = 'rgba(239, 68, 68, 0.55)';
-        midGlowColor = 'rgba(239, 68, 68, 0.18)';
-      } else if (state === 'speaking') {
-        color1 = 'rgba(168, 85, 247, 0.95)'; // violet
-        color2 = 'rgba(99, 102, 241, 0.85)';  // indigo
-        color3 = 'rgba(6, 182, 212, 0.75)';   // cyan
-        glowColor = 'rgba(168, 85, 247, 0.55)';
-        midGlowColor = 'rgba(168, 85, 247, 0.18)';
-      } else if (state === 'analyzing') {
-        color1 = 'rgba(245, 158, 11, 0.95)';  // amber
-        color2 = 'rgba(14, 165, 233, 0.85)';  // cyan
-        color3 = 'rgba(139, 92, 246, 0.7)';   // violet
-        glowColor = 'rgba(245, 158, 11, 0.5)';
-        midGlowColor = 'rgba(245, 158, 11, 0.18)';
-      } else if (state === 'interrupted') {
-        color1 = 'rgba(251, 146, 60, 0.95)';  // orange
-        color2 = 'rgba(239, 68, 68, 0.75)';
-        color3 = 'rgba(254, 215, 170, 0.5)';
-        glowColor = 'rgba(251, 146, 60, 0.55)';
-        midGlowColor = 'rgba(251, 146, 60, 0.18)';
-      } else if (state === 'muted') {
-        color1 = 'rgba(100, 116, 139, 0.6)';
-        color2 = 'rgba(71, 85, 105, 0.5)';
-        color3 = 'rgba(148, 163, 184, 0.3)';
-        glowColor = 'rgba(100, 116, 139, 0.2)';
-        midGlowColor = 'rgba(100, 116, 139, 0.08)';
+      const curState = stateRef.current;
+      const curEmergency = isEmergencyRef.current;
+      const curSpeaking = isUserSpeakingRef.current;
+      const curLevel = audioLevelRef.current || 0;
+
+      // Solid minimalist clinical state color (flat, no gradient)
+      let stateColor = '#10b981'; // default listening: emerald
+      if (curEmergency) {
+        stateColor = '#ef4444';
+      } else if (curState === 'speaking') {
+        stateColor = '#3b82f6';
+      } else if (curState === 'analyzing') {
+        stateColor = '#f59e0b';
+      } else if (curState === 'interrupted') {
+        stateColor = '#f97316';
+      } else if (curState === 'muted') {
+        stateColor = '#71717a';
+      }
+
+      // Compute speech volume amplitude
+      let targetAmp = 0;
+      let hasFreq = false;
+
+      if (curState === 'muted') {
+        targetAmp = 0;
+      } else if (analyserRef?.current && curState === 'listening') {
+        analyserRef.current.getByteFrequencyData(freqData);
+        let sum = 0;
+        // Human voice dominant bands: bin 1 to bin 14 (~250Hz - ~3500Hz)
+        for (let b = 1; b <= 14; b++) {
+          sum += freqData[b];
+        }
+        const rawAmp = sum / (14 * 255);
+        if (rawAmp > 0.012) {
+          hasFreq = true;
+          // Non-linear scaling so normal conversational voice reaches ~0.5 - 0.9
+          targetAmp = Math.min(1.0, Math.pow(rawAmp * 2.4, 0.72));
+        }
+      }
+
+      if (!hasFreq) {
+        if (curState === 'speaking') {
+          targetAmp = 0.4 + Math.sin(phase * 4) * 0.25;
+        } else if (curState === 'listening') {
+          targetAmp = curSpeaking ? Math.max(0.45, curLevel) : curLevel * 0.8;
+        }
+      }
+
+      // Smooth attack/decay for snappy, organic movement
+      smoothAmp += (targetAmp - smoothAmp) * 0.28;
+
+      // 1. Static guide hairline ring
+      const baseR = 52;
+      ctx.beginPath();
+      ctx.arc(cx, cy, baseR + 24, 0, Math.PI * 2);
+      ctx.strokeStyle = '#27272a';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // 2. Active responsive voice ripple ring (expands dynamically up to 82px)
+      const dynamicR = baseR + smoothAmp * 28;
+      ctx.beginPath();
+      if (smoothAmp > 0.08 && (curState === 'listening' || curState === 'speaking')) {
+        const points = 36;
+        for (let p = 0; p <= points; p++) {
+          const theta = (p / points) * Math.PI * 2;
+          const ripple = Math.sin(theta * 6 + phase * 5) * (smoothAmp * 4.5);
+          const r = dynamicR + ripple;
+          const x = cx + Math.cos(theta) * r;
+          const y = cy + Math.sin(theta) * r;
+          if (p === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
       } else {
-        // Listening / idle ambient breathing
-        color1 = 'rgba(14, 165, 233, 0.95)'; // cyan
-        color2 = 'rgba(16, 185, 129, 0.85)'; // emerald
-        color3 = 'rgba(56, 189, 248, 0.65)';  // sky
-        glowColor = 'rgba(14, 165, 233, 0.5)';
-        midGlowColor = 'rgba(14, 165, 233, 0.18)';
+        ctx.arc(cx, cy, dynamicR, 0, Math.PI * 2);
       }
-
-      const baseR = Math.min(width, height) * 0.2;
-      const boost = Math.min(audioLevel * 65, width * 0.18);
-      const r = baseR + boost;
-
-      // 1. Ambient Outer Halo
-      const haloGrad = ctx.createRadialGradient(cx, cy, r * 0.3, cx, cy, r * 1.85);
-      haloGrad.addColorStop(0, glowColor);
-      haloGrad.addColorStop(0.5, midGlowColor);
-      haloGrad.addColorStop(1, 'transparent');
-      ctx.fillStyle = haloGrad;
-      ctx.beginPath();
-      ctx.arc(cx, cy, r * 1.85, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 2. Harmonic Fluid Deformed Waveform Boundary
-      ctx.save();
-      ctx.beginPath();
-      const points = 64;
-      for (let i = 0; i <= points; i++) {
-        const theta = (i / points) * Math.PI * 2;
-        const speed = state === 'speaking' ? 3.8 : (state === 'analyzing' ? 5.2 : 2.2);
-        const amp = state === 'speaking' ? 14 : (state === 'listening' ? 7 + audioLevel * 22 : 5);
-        const wave = Math.sin(theta * 4 + phase * speed) * amp
-                   + Math.cos(theta * 2 - phase * (speed * 0.7)) * (amp * 0.5);
-        const curR = r + wave;
-        const x = cx + Math.cos(theta) * curR;
-        const y = cy + Math.sin(theta) * curR;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.closePath();
-
-      const coreGrad = ctx.createRadialGradient(cx - r * 0.25, cy - r * 0.25, r * 0.1, cx, cy, r * 1.25);
-      coreGrad.addColorStop(0, color3);
-      coreGrad.addColorStop(0.35, color1);
-      coreGrad.addColorStop(1, color2);
-      ctx.fillStyle = coreGrad;
-      ctx.shadowColor = glowColor;
-      ctx.shadowBlur = 30 + audioLevel * 35;
-      ctx.fill();
-      ctx.restore();
-
-      // 3. Orbital Celestial Rings
-      const ringRot = phase * (state === 'analyzing' ? 2.8 : 0.9);
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(ringRot);
-      ctx.beginPath();
-      ctx.ellipse(0, 0, r * 1.35, r * 0.65, Math.PI / 4, 0, Math.PI * 2);
-      ctx.strokeStyle = color3;
-      ctx.lineWidth = 1.8;
-      ctx.shadowColor = color3;
-      ctx.shadowBlur = 10;
+      ctx.strokeStyle = stateColor;
+      ctx.lineWidth = smoothAmp > 0.1 || curSpeaking || curState === 'speaking' || curEmergency ? 2.5 : 1.5;
       ctx.stroke();
 
+      // 3. Center Solid Indicator Hub
       ctx.beginPath();
-      ctx.ellipse(0, 0, r * 1.45, r * 0.55, -Math.PI / 4, 0, Math.PI * 2);
-      ctx.strokeStyle = color2;
-      ctx.lineWidth = 1.2;
+      ctx.arc(cx, cy, 32, 0, Math.PI * 2);
+      ctx.fillStyle = '#141417';
+      ctx.fill();
+      ctx.strokeStyle = smoothAmp > 0.1 || curSpeaking ? stateColor : '#27272a';
+      ctx.lineWidth = smoothAmp > 0.1 || curSpeaking ? 1.5 : 1;
       ctx.stroke();
-      ctx.restore();
 
-      animId = requestAnimationFrame(render);
+      // 4. Center 5 Minimalist Audio Waveform Bars (jumps up to 30px with voice)
+      const numBars = 5;
+      const barWidth = 3;
+      const barGap = 4;
+      const totalBarWidth = numBars * barWidth + (numBars - 1) * barGap;
+      const startX = cx - totalBarWidth / 2;
+
+      for (let i = 0; i < numBars; i++) {
+        const x = startX + i * (barWidth + barGap);
+        const distFromCenter = Math.abs(i - 2);
+        const centerFactor = 1 - distFromCenter * 0.18;
+        let barH = 5;
+
+        if (curState === 'muted') {
+          barH = 4;
+        } else if (hasFreq && curState === 'listening') {
+          // Direct harmonic bin response
+          const binIdx = [1, 3, 5, 8, 12][i];
+          const binVal = freqData[binIdx] / 255;
+          barH = 5 + Math.pow(binVal * 2.0, 0.72) * 26 * centerFactor;
+        } else if (curState === 'speaking') {
+          barH = 7 + Math.sin(phase * 4 + i * 0.85) * 14 * centerFactor;
+        } else if (curState === 'analyzing') {
+          barH = 6 + Math.sin(phase * 6 + i * 1.2) * 7;
+        } else if (curState === 'listening') {
+          barH = 5 + smoothAmp * 24 * centerFactor + Math.sin(phase * 2 + i * 0.4) * 2;
+        }
+
+        barH = Math.max(4, Math.min(32, barH));
+
+        ctx.fillStyle = stateColor;
+        ctx.beginPath();
+        if (ctx.roundRect) {
+          ctx.roundRect(x, cy - barH / 2, barWidth, barH, 2);
+        } else {
+          ctx.rect(x, cy - barH / 2, barWidth, barH);
+        }
+        ctx.fill();
+      }
     };
 
     render();
     return () => cancelAnimationFrame(animId);
-  }, [state, audioLevel, isEmergency]);
+  }, []);
 
   return (
     <div className={`live-orb-wrapper ${state} ${isEmergency ? 'emergency' : ''}`}>
-      <div className="live-orb-ambient-glow" />
-      <canvas ref={canvasRef} width={280} height={280} className="live-orb-canvas" />
+      <canvas ref={canvasRef} width={240} height={240} className="live-orb-canvas" />
+    </div>
+  );
+}
+
+function LiveSpectrumBars({ analyserRef, liveState, isUserSpeaking, audioLevel }) {
+  const containerRef = useRef(null);
+  const liveStateRef = useRef(liveState);
+  liveStateRef.current = liveState;
+  const isUserSpeakingRef = useRef(isUserSpeaking);
+  isUserSpeakingRef.current = isUserSpeaking;
+  const audioLevelRef = useRef(audioLevel);
+  audioLevelRef.current = audioLevel;
+
+  useEffect(() => {
+    let animId;
+    let phase = 0;
+    const freqData = new Uint8Array(32);
+    const container = containerRef.current;
+    if (!container) return;
+    const barEls = container.querySelectorAll('.spectrum-bar');
+
+    const updateBars = () => {
+      animId = requestAnimationFrame(updateBars);
+      phase += 0.08;
+      const curState = liveStateRef.current;
+      const curSpeaking = isUserSpeakingRef.current;
+      const curLevel = audioLevelRef.current || 0;
+
+      if (curState === 'muted') {
+        for (let i = 0; i < barEls.length; i++) {
+          barEls[i].style.height = '3px';
+        }
+        return;
+      }
+
+      let hasFreq = false;
+      if (analyserRef?.current && curState === 'listening') {
+        analyserRef.current.getByteFrequencyData(freqData);
+        let maxVal = 0;
+        for (let i = 0; i < 24; i++) {
+          if (freqData[i] > maxVal) maxVal = freqData[i];
+        }
+        if (maxVal > 8) {
+          hasFreq = true;
+          for (let i = 0; i < barEls.length; i++) {
+            const bin = Math.min(31, Math.floor(i * 1.1) + 1);
+            const raw = freqData[bin] / 255;
+            const boost = i < 16 ? 1.6 : 1.1;
+            const h = Math.max(3, Math.min(32, Math.pow(raw * boost, 0.72) * 32));
+            barEls[i].style.height = `${Math.round(h)}px`;
+          }
+        }
+      }
+
+      if (!hasFreq) {
+        if (curState === 'speaking') {
+          for (let i = 0; i < barEls.length; i++) {
+            const wave = Math.sin(phase * 3.5 + i * 0.45) * 0.5 + 0.5;
+            const centerFactor = 1 - Math.abs(i - 11.5) / 14;
+            const h = Math.max(3, Math.min(28, wave * 24 * centerFactor + 4));
+            barEls[i].style.height = `${Math.round(h)}px`;
+          }
+        } else if (curState === 'analyzing') {
+          for (let i = 0; i < barEls.length; i++) {
+            const wave = Math.sin(phase * 5 + i * 0.6) * 5 + 6;
+            barEls[i].style.height = `${Math.round(Math.max(3, wave))}px`;
+          }
+        } else if (curState === 'listening') {
+          const amp = curSpeaking ? Math.max(0.45, curLevel) : curLevel;
+          for (let i = 0; i < barEls.length; i++) {
+            const centerFactor = 1 - Math.abs(i - 11.5) / 14;
+            const wave = Math.sin(phase * 3 + i * 0.5) * 0.35 + 0.65;
+            const h = Math.max(3, Math.min(30, amp * 28 * wave * centerFactor + 3));
+            barEls[i].style.height = `${Math.round(h)}px`;
+          }
+        } else {
+          for (let i = 0; i < barEls.length; i++) {
+            barEls[i].style.height = '3px';
+          }
+        }
+      }
+    };
+
+    updateBars();
+    return () => cancelAnimationFrame(animId);
+  }, []);
+
+  return (
+    <div ref={containerRef} className="live-spectrum-row">
+      {Array.from({ length: 24 }).map((_, i) => (
+        <span key={i} className={`spectrum-bar ${liveState}`} />
+      ))}
     </div>
   );
 }
@@ -229,6 +356,7 @@ export default function App() {
   const [isMicMuted, setIsMicMuted] = useState(false);
   const [liveSubtitles, setLiveSubtitles] = useState({ user: '', assistant: '' });
   const [liveAudioLevel, setLiveAudioLevel] = useState(0);
+  const [isUserSpeaking, setIsUserSpeaking] = useState(false);
   const [liveSessionSeconds, setLiveSessionSeconds] = useState(0);
   const [isLiveTranscriptVisible, setIsLiveTranscriptVisible] = useState(false);
 
@@ -238,6 +366,7 @@ export default function App() {
   const liveAnalyserRef = useRef(null);
   const liveMediaStreamRef = useRef(null);
   const liveMediaRecorderRef = useRef(null);
+  const liveProcessorRef = useRef(null);
   const liveAudioChunksRef = useRef([]);
   const liveSilenceTimerRef = useRef(null);
   const liveSpeechStartTimeRef = useRef(0);
@@ -630,6 +759,14 @@ export default function App() {
       liveMediaStreamRef.current = null;
     }
 
+    if (liveProcessorRef.current) {
+      try {
+        liveProcessorRef.current.disconnect();
+        liveProcessorRef.current.onaudioprocess = null;
+      } catch {}
+      liveProcessorRef.current = null;
+    }
+
     if (liveAudioContextRef.current) {
       liveAudioContextRef.current.close().catch(() => {});
       liveAudioContextRef.current = null;
@@ -641,6 +778,8 @@ export default function App() {
     }
 
     isSpeakingUserRef.current = false;
+    setIsUserSpeaking(false);
+    setLiveAudioLevel(0);
     setLiveState('listening');
   };
 
@@ -665,6 +804,8 @@ export default function App() {
       liveWsRef.current.send(JSON.stringify({ type: 'interrupt' }));
     }
     fetch('/api/interrupt', { method: 'POST' }).catch(() => {});
+    isSpeakingUserRef.current = false;
+    setIsUserSpeaking(false);
     setLiveState('interrupted');
     setTimeout(() => {
       setLiveState('listening');
@@ -716,7 +857,7 @@ export default function App() {
     } else {
       try {
         const formData = new FormData();
-        const ext = blob.type.includes('mp4') ? 'mp4' : 'webm';
+        const ext = blob.type.includes('wav') ? 'wav' : (blob.type.includes('mp4') ? 'mp4' : 'webm');
         formData.append('audio_file', blob, `live_speech.${ext}`);
         const res = await fetch('/api/voice', { method: 'POST', body: formData });
         if (res.ok) {
@@ -805,105 +946,169 @@ export default function App() {
       liveAudioContextRef.current = ctx;
       const source = ctx.createMediaStreamSource(stream);
       const analyser = ctx.createAnalyser();
-      analyser.fftSize = 256;
-      analyser.smoothingTimeConstant = 0.7;
+      analyser.fftSize = 64;
+      analyser.smoothingTimeConstant = 0.4;
       source.connect(analyser);
       liveAnalyserRef.current = analyser;
 
-      let mimeType = 'audio/webm;codecs=opus';
-      if (!MediaRecorder.isTypeSupported(mimeType)) {
-        mimeType = MediaRecorder.isTypeSupported('audio/mp4') ? 'audio/mp4' : '';
-      }
-
-      const createRecorder = () => {
-        const mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-        mr.ondataavailable = (e) => {
-          if (e.data && e.data.size > 0) {
-            liveAudioChunksRef.current.push(e.data);
-          }
-        };
-        mr.onstop = () => {
-          if (liveAudioChunksRef.current.length > 0) {
-            const blob = new Blob(liveAudioChunksRef.current, {
-              type: mimeType || 'audio/webm',
-            });
-            liveAudioChunksRef.current = [];
-            handleLiveAudioUpload(blob);
-          }
-        };
-        return mr;
-      };
-
-      liveMediaRecorderRef.current = createRecorder();
       connectLiveWebSocket();
 
-      const timeData = new Uint8Array(analyser.frequencyBinCount);
-      let smoothRms = 0;
+      // Lossless 16-bit Mono PCM WAV Encoder
+      const encodeWavBlob = (samples, sampleRate) => {
+        const buffer = new ArrayBuffer(44 + samples.length * 2);
+        const view = new DataView(buffer);
+        const writeString = (offset, string) => {
+          for (let i = 0; i < string.length; i++) {
+            view.setUint8(offset + i, string.charCodeAt(i));
+          }
+        };
+        writeString(0, 'RIFF');
+        view.setUint32(4, 36 + samples.length * 2, true);
+        writeString(8, 'WAVE');
+        writeString(12, 'fmt ');
+        view.setUint32(16, 16, true);
+        view.setUint16(20, 1, true); // PCM
+        view.setUint16(22, 1, true); // Mono
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, sampleRate * 2, true);
+        view.setUint16(32, 2, true);
+        view.setUint16(34, 16, true);
+        writeString(36, 'data');
+        view.setUint32(40, samples.length * 2, true);
 
-      const vadLoop = () => {
-        if (!liveAudioContextRef.current) return;
-        analyser.getByteTimeDomainData(timeData);
-
-        let sum = 0;
-        for (let i = 0; i < timeData.length; i++) {
-          const v = (timeData[i] - 128) / 128;
-          sum += v * v;
+        let offset = 44;
+        for (let i = 0; i < samples.length; i++, offset += 2) {
+          const s = Math.max(-1, Math.min(1, samples[i]));
+          view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7fff, true);
         }
-        const rms = Math.sqrt(sum / timeData.length);
-        smoothRms = smoothRms * 0.7 + rms * 0.3;
-        setLiveAudioLevel(smoothRms);
+        return new Blob([buffer], { type: 'audio/wav' });
+      };
 
+      // 500ms pre-roll circular buffer to eliminate onset clipping
+      const sampleRate = ctx.sampleRate || 16000;
+      const preRollCapacity = Math.floor(sampleRate * 0.5); // ~500ms
+      const preRollRing = new Float32Array(preRollCapacity);
+      let preRollIndex = 0;
+      let preRollCount = 0;
+      let accumulatedSpeech = [];
+      let smoothRms = 0;
+      let noiseFloor = 0.006; // Adaptive ambient baseline
+
+      // Low-latency PCM streaming & Voice Activity Processor
+      const bufferSize = 2048;
+      const processor = ctx.createScriptProcessor(bufferSize, 1, 1);
+      liveProcessorRef.current = processor;
+
+      processor.onaudioprocess = (e) => {
+        const inputData = e.inputBuffer.getChannelData(0);
         const curState = liveStateRef.current;
         const muted = isMicMutedRef.current;
 
-        // Barge-in check: If AI is speaking and user vocalizes loudly
-        if (curState === 'speaking' && !muted && smoothRms > 0.08) {
+        // 1. Calculate Frame RMS
+        let sum = 0;
+        for (let i = 0; i < inputData.length; i++) {
+          sum += inputData[i] * inputData[i];
+        }
+        const rms = Math.sqrt(sum / inputData.length);
+        smoothRms = smoothRms * 0.65 + rms * 0.35;
+
+        // 2. Compute normalized speech volume dynamics (0.0 to 1.0)
+        const ambientBase = Math.max(0.003, noiseFloor);
+        const speechSignal = Math.max(0, smoothRms - ambientBase * 0.7);
+        const normalizedSpeechLevel = Math.min(1.0, Math.pow(speechSignal * 24, 0.75));
+        setLiveAudioLevel(normalizedSpeechLevel);
+
+        // 3. Track ambient noise floor adaptively
+        noiseFloor = noiseFloor * 0.995 + rms * 0.005;
+
+        // 4. Barge-in check: If agent is speaking and patient vocalizes
+        if (curState === 'speaking' && !muted && smoothRms > 0.06) {
           interruptLiveSpeech();
+          return;
         }
 
-        // VAD in listening mode
+        // 5. Voice Activity Detection & Recording (High sensitivity + Pre-roll)
         if (curState === 'listening' && !muted) {
-          const speechThreshold = 0.032;
-          if (smoothRms >= speechThreshold) {
-            if (!isSpeakingUserRef.current) {
+          // Dynamic dual-threshold (Hysteresis): sensitive onset, gentle hold
+          const speechStartThreshold = Math.max(0.011, Math.min(0.022, noiseFloor * 2.2));
+          const speechHoldThreshold = Math.max(0.006, Math.min(0.014, noiseFloor * 1.3));
+
+          if (!isSpeakingUserRef.current) {
+            // Buffer into pre-roll ring buffer while waiting
+            for (let i = 0; i < inputData.length; i++) {
+              preRollRing[preRollIndex] = inputData[i];
+              preRollIndex = (preRollIndex + 1) % preRollCapacity;
+              if (preRollCount < preRollCapacity) preRollCount++;
+            }
+
+            // Check if patient started speaking
+            if (smoothRms >= speechStartThreshold) {
               isSpeakingUserRef.current = true;
+              setIsUserSpeaking(true);
               liveSpeechStartTimeRef.current = Date.now();
-              liveAudioChunksRef.current = [];
-              if (liveSilenceTimerRef.current) clearTimeout(liveSilenceTimerRef.current);
-              try {
-                if (liveMediaRecorderRef.current.state === 'inactive') {
-                  liveMediaRecorderRef.current.start(200);
-                }
-              } catch (e) {}
-            } else {
               if (liveSilenceTimerRef.current) {
                 clearTimeout(liveSilenceTimerRef.current);
                 liveSilenceTimerRef.current = null;
               }
+
+              // Unroll pre-roll ring buffer (previous 500ms before speech) to eliminate onset clipping
+              const preRollChunk = new Float32Array(preRollCount);
+              const startIdx = preRollCount < preRollCapacity ? 0 : preRollIndex;
+              for (let i = 0; i < preRollCount; i++) {
+                preRollChunk[i] = preRollRing[(startIdx + i) % preRollCapacity];
+              }
+              accumulatedSpeech = [preRollChunk, new Float32Array(inputData)];
             }
-          } else if (isSpeakingUserRef.current) {
-            if (!liveSilenceTimerRef.current) {
-              liveSilenceTimerRef.current = setTimeout(() => {
-                const speechDuration = Date.now() - liveSpeechStartTimeRef.current;
-                if (speechDuration >= 450) {
-                  setLiveState('analyzing');
-                  try {
-                    if (liveMediaRecorderRef.current && liveMediaRecorderRef.current.state === 'recording') {
-                      liveMediaRecorderRef.current.stop();
-                    }
-                  } catch (e) {}
-                }
-                isSpeakingUserRef.current = false;
+          } else {
+            // Currently accumulating speech
+            accumulatedSpeech.push(new Float32Array(inputData));
+
+            if (smoothRms >= speechHoldThreshold) {
+              // Voice active: keep reset timer
+              if (liveSilenceTimerRef.current) {
+                clearTimeout(liveSilenceTimerRef.current);
                 liveSilenceTimerRef.current = null;
-              }, 800);
+              }
+            } else {
+              // Silence detected: initiate clinical end-of-turn window (1300ms)
+              if (!liveSilenceTimerRef.current) {
+                liveSilenceTimerRef.current = setTimeout(() => {
+                  const speechDuration = Date.now() - liveSpeechStartTimeRef.current;
+                  if (speechDuration >= 400 && accumulatedSpeech.length > 0) {
+                    setLiveState('analyzing');
+                    // Concatenate all float32 speech frames
+                    let totalLen = 0;
+                    for (let c of accumulatedSpeech) totalLen += c.length;
+                    const fullPcm = new Float32Array(totalLen);
+                    let offset = 0;
+                    for (let c of accumulatedSpeech) {
+                      fullPcm.set(c, offset);
+                      offset += c.length;
+                    }
+                    accumulatedSpeech = [];
+                    // Generate pristine WAV blob and dispatch
+                    const wavBlob = encodeWavBlob(fullPcm, sampleRate);
+                    handleLiveAudioUpload(wavBlob);
+                  }
+                  isSpeakingUserRef.current = false;
+                  setIsUserSpeaking(false);
+                  liveSilenceTimerRef.current = null;
+                  preRollCount = 0;
+                  preRollIndex = 0;
+                }, 1300); // 1300ms natural clinical pause tolerance
+              }
             }
           }
         }
-
-        liveAnimFrameRef.current = requestAnimationFrame(vadLoop);
       };
 
-      liveAnimFrameRef.current = requestAnimationFrame(vadLoop);
+      source.connect(processor);
+      // Connect to a silent dummy destination to keep ScriptProcessor running
+      const dummyGain = ctx.createGain();
+      dummyGain.gain.value = 0;
+      processor.connect(dummyGain);
+      dummyGain.connect(ctx.destination);
+
       setLiveState('listening');
     } catch (err) {
       console.error('Failed to start Live Audio:', err);
@@ -914,18 +1119,11 @@ export default function App() {
 
   return (
     <div className="app-root">
-      {/* Background glow effects */}
-      <div className="bg-ambient">
-        <div className="ambient-glow-1"></div>
-        <div className="ambient-glow-2"></div>
-        <div className="ambient-grid"></div>
-      </div>
-
       {/* Top Header */}
       <header className="top-header">
         <div className="header-brand">
           <div className="brand-icon">
-            <Stethoscope size={20} />
+            <Stethoscope size={18} />
           </div>
           <div className="brand-meta">
             <h1 className="brand-title">
@@ -937,20 +1135,20 @@ export default function App() {
         </div>
 
         <div className="header-actions">
-          {/* Live Talk Button (ChatGPT Live Full-Duplex Voice) */}
+          {/* Live Talk Button */}
           <button
             type="button"
             className={`btn-live-talk-head ${isLiveTalkOpen ? 'active' : ''}`}
             onClick={openLiveTalk}
-            title="Enter Hands-Free Live Voice Mode (Like ChatGPT Live)"
+            title="Enter Hands-Free Live Voice Mode"
           >
             <span className="live-talk-pulse"></span>
-            <Radio size={14} className="live-radio-icon" />
+            <Radio size={13} className="live-radio-icon" />
             <span className="btn-live-talk-label-full">LIVE TALK</span>
             <span className="btn-live-talk-label-compact">LIVE</span>
           </button>
 
-          {/* Speculative Streaming Pill Toggle (Thumb friendly on Redmi 13C) */}
+          {/* Speculative Streaming Pill Toggle */}
           <button
             type="button"
             className={`btn-spec-pill ${speculativeEnabled ? 'active' : 'inactive'}`}
@@ -961,7 +1159,7 @@ export default function App() {
                 : 'Sequential Baseline is ON. Tap to activate Speculative Streaming (CMSPE).'
             }
           >
-            <Zap size={14} className="spec-icon-spin" />
+            <Zap size={13} />
             <span className="spec-label-full">{speculativeEnabled ? 'SPEC: ON' : 'SEQ: OFF'}</span>
             <span className="spec-label-compact">{speculativeEnabled ? 'SPEC' : 'SEQ'}</span>
           </button>
@@ -1569,21 +1767,30 @@ export default function App() {
               </div>
             )}
 
-            {/* Main Center Stage: Organic Glowing Voice Orb */}
+            {/* Main Center Stage: Minimalist Clinical Voice Hub */}
             <div className="live-talk-stage">
               <VoiceOrb
                 state={liveState}
+                analyserRef={liveAnalyserRef}
                 audioLevel={liveAudioLevel}
                 isEmergency={!!activeEmergency}
+                isUserSpeaking={isUserSpeaking}
               />
 
               {/* State Indicator Badge */}
               <div className={`live-state-pill ${liveState} ${activeEmergency ? 'emergency' : ''}`}>
                 {liveState === 'listening' && (
-                  <>
-                    <span className="state-pulse-dot cyan"></span>
-                    <span>Listening to you... (Speak naturally)</span>
-                  </>
+                  isUserSpeaking || liveAudioLevel > 0.15 ? (
+                    <>
+                      <span className="state-pulse-dot cyan active-hearing"></span>
+                      <span style={{ color: '#34D399', fontWeight: 700 }}>Hearing you... (Recording speech)</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="state-pulse-dot cyan"></span>
+                      <span>Listening... (Speak naturally)</span>
+                    </>
+                  )
                 )}
                 {liveState === 'analyzing' && (
                   <>
@@ -1612,20 +1819,12 @@ export default function App() {
               </div>
 
               {/* Real-Time Audio Frequency Bars */}
-              <div className="live-spectrum-row">
-                {Array.from({ length: 24 }).map((_, i) => {
-                  const h = liveState === 'muted'
-                    ? 3
-                    : Math.max(3, Math.min(36, Math.sin(i * 0.45 + liveAudioLevel * 8) * (liveAudioLevel * 50) + 4));
-                  return (
-                    <span
-                      key={i}
-                      className={`spectrum-bar ${liveState}`}
-                      style={{ height: `${h}px` }}
-                    />
-                  );
-                })}
-              </div>
+              <LiveSpectrumBars
+                analyserRef={liveAnalyserRef}
+                liveState={liveState}
+                isUserSpeaking={isUserSpeaking}
+                audioLevel={liveAudioLevel}
+              />
 
               {/* Live Closed-Captions Card */}
               <div className="live-subtitles-card">

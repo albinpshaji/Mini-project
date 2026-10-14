@@ -37,12 +37,13 @@ class StreamingASR:
         self.frame_ms = 30
         self.frame_samples = int(self.sample_rate * self.frame_ms / 1000)
 
-        self.vad = webrtcvad.Vad(3)
+        # WebRTC VAD mode 2 (balanced sensitivity: allows wider hearing range without missing soft speech)
+        self.vad = webrtcvad.Vad(2)
         self.silence_ms_threshold = config.get("vad_silence_ms", 500)
         self.partial_interval_ms = config.get("partial_emit_interval_ms", 250)
 
-        # High-pass filter at 300Hz to remove fan/HVAC noise that triggers false VAD
-        self._hpf_sos = butter(4, 300, btype='highpass', fs=self.sample_rate, output='sos')
+        # High-pass filter at 80Hz to remove sub-audible rumbles while preserving male & female speech fundamentals (85-255Hz)
+        self._hpf_sos = butter(4, 80, btype='highpass', fs=self.sample_rate, output='sos')
         self._hpf_zi = np.zeros((self._hpf_sos.shape[0], 2))
 
         self.model = WhisperModel(

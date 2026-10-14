@@ -540,6 +540,13 @@ def process_audio_pipeline(audio_bytes: bytes, filename_hint: str = "speech.webm
     if biomarkers.acuity_boost > 0:
         log.warning(f"🚨 Acoustic distress alert: {biomarkers.clinical_rationale} (+{biomarkers.acuity_boost})")
 
+    # Soft AGC / Peak Normalization to dramatically expand hearing range for quiet/distant phone mic audio
+    max_amp = float(np.max(np.abs(audio_pcm))) if len(audio_pcm) > 0 else 0.0
+    if 0.001 < max_amp < 0.6:
+        gain = min(0.75 / max_amp, 4.0)
+        audio_pcm = audio_pcm * gain
+        log.info(f"🎙️ Acoustic AGC boost applied: {gain:.2f}x (Peak: {max_amp:.3f} -> {max_amp * gain:.3f})")
+
     # 3. Speculative Partial Pipeline Trigger (CMSPE Innovation)
     partial_text = ""
     speculative_info = {
