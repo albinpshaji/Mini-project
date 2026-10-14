@@ -1,0 +1,129 @@
+{
+  "guardrail_micro": {
+    "iterations": 3000,
+    "mean_us": 11.23,
+    "median_us": 9.6,
+    "p95_us": 18.62,
+    "max_us": 30.37,
+    "mean_ms": 0.0112
+  },
+  "legacy_ttfa_mean_ms": 6684.8,
+  "legacy_ttfa_median_ms": 218.6,
+  "stream_ttft_mean_ms": 6357.8,
+  "stream_ttfa_mean_ms": 6358.0,
+  "stream_ttfa_median_ms": 176.8,
+  "mean_latency_reduction_ms": 326.8,
+  "mean_ttfa_speedup": 13.5,
+  "comparisons": [
+    {
+      "prompt": "I have had a throbbing headache and slight dizziness for two days.",
+      "legacy_ttfa_ms": 3560.3,
+      "stream_ttft_ms": 20563.2,
+      "stream_ttfa_ms": 20563.3,
+      "stream_total_ms": 20565.9,
+      "audio_chunks": 3,
+      "first_chunk_spoken_duration_s": 1.79,
+      "ttfa_reduction_ms": -17002.9,
+      "ttfa_speedup": 0.17
+    },
+    {
+      "prompt": "My 4-year-old child has a fever of 102 and is coughing continuously.",
+      "legacy_ttfa_ms": 20481.5,
+      "stream_ttft_ms": 20791.6,
+      "stream_ttfa_ms": 20791.7,
+      "stream_total_ms": 20794.1,
+      "audio_chunks": 2,
+      "first_chunk_spoken_duration_s": 1.56,
+      "ttfa_reduction_ms": -310.2,
+      "ttfa_speedup": 0.99
+    },
+    {
+      "prompt": "I slipped on ice and twisted my left ankle, it is swollen and bruised.",
+      "legacy_ttfa_ms": 20426.7,
+      "stream_ttft_ms": 21019.6,
+      "stream_ttfa_ms": 21019.6,
+      "stream_total_ms": 21021.2,
+      "audio_chunks": 3,
+      "first_chunk_spoken_duration_s": 1.35,
+      "ttfa_reduction_ms": -592.9,
+      "ttfa_speedup": 0.97
+    },
+    {
+      "prompt": "I feel a dull ache in my lower stomach that started this morning after breakfast.",
+      "legacy_ttfa_ms": 21235.1,
+      "stream_ttft_ms": 167.9,
+      "stream_ttfa_ms": 168.2,
+      "stream_total_ms": 168.4,
+      "audio_chunks": 1,
+      "first_chunk_spoken_duration_s": 5.57,
+      "ttfa_reduction_ms": 21066.9,
+      "ttfa_speedup": 126.25
+    },
+    {
+      "prompt": "I have had a runny nose and scratchy throat since yesterday afternoon.",
+      "legacy_ttfa_ms": 170.5,
+      "stream_ttft_ms": 183.3,
+      "stream_ttfa_ms": 183.6,
+      "stream_total_ms": 183.9,
+      "audio_chunks": 1,
+      "first_chunk_spoken_duration_s": 5.89,
+      "ttfa_reduction_ms": -13.1,
+      "ttfa_speedup": 0.93
+    },
+    {
+      "prompt": "My lower back feels tight and sore after lifting heavy boxes yesterday.",
+      "legacy_ttfa_ms": 181.5,
+      "stream_ttft_ms": 157.4,
+      "stream_ttfa_ms": 157.7,
+      "stream_total_ms": 158.0,
+      "audio_chunks": 1,
+      "first_chunk_spoken_duration_s": 5.63,
+      "ttfa_reduction_ms": 23.8,
+      "ttfa_speedup": 1.15
+    },
+    {
+      "prompt": "I developed a mild red rash on my forearms after gardening.",
+      "legacy_ttfa_ms": 189.7,
+      "stream_ttft_ms": 173.1,
+      "stream_ttfa_ms": 173.4,
+      "stream_total_ms": 173.7,
+      "audio_chunks": 1,
+      "first_chunk_spoken_duration_s": 5.65,
+      "ttfa_reduction_ms": 16.3,
+      "ttfa_speedup": 1.09
+    },
+    {
+      "prompt": "I feel mild nausea and haven't been able to keep lunch down.",
+      "legacy_ttfa_ms": 203.8,
+      "stream_ttft_ms": 168.3,
+      "stream_ttfa_ms": 168.6,
+      "stream_total_ms": 168.8,
+      "audio_chunks": 1,
+      "first_chunk_spoken_duration_s": 5.64,
+      "ttfa_reduction_ms": 35.2,
+      "ttfa_speedup": 1.21
+    },
+    {
+      "prompt": "I have an earache on my right side that gets worse when swallowing.",
+      "legacy_ttfa_ms": 165.3,
+      "stream_ttft_ms": 176.9,
+      "stream_ttfa_ms": 177.1,
+      "stream_total_ms": 177.4,
+      "audio_chunks": 1,
+      "first_chunk_spoken_duration_s": 5.77,
+      "ttfa_reduction_ms": -11.8,
+      "ttfa_speedup": 0.93
+    },
+    {
+      "prompt": "Actually, the pain started 2 weeks ago rather than yesterday.",
+      "legacy_ttfa_ms": 233.3,
+      "stream_ttft_ms": 176.3,
+      "stream_ttfa_ms": 176.6,
+      "stream_total_ms": 176.8,
+      "audio_chunks": 1,
+      "first_chunk_spoken_duration_s": 5.46,
+      "ttfa_reduction_ms": 56.7,
+      "ttfa_speedup": 1.32
+    }
+  ]
+}
