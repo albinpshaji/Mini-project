@@ -255,6 +255,7 @@ def main():
     parser.add_argument("--cases", type=int, default=10, help="Number of cases to evaluate")
     parser.add_argument("--model", default="qwen3.5:4b", help="Model name")
     parser.add_argument("--save-baseline", default="eval/results/runs/baseline_gcd_summary.json")
+    parser.add_argument("--save-candidate", default="eval/results/runs/candidate_gcd_summary.json")
     args = parser.parse_args()
 
     cases = load_clinical_dataset(max_cases=args.cases)
@@ -268,7 +269,7 @@ def main():
 
     elif args.mode in ("candidate", "gcd"):
         summary = run_benchmark_iteration("candidate", cases, model_name=args.model)
-        cand_path = "eval/results/runs/candidate_gcd_summary.json"
+        cand_path = args.save_candidate
         os.makedirs(os.path.dirname(cand_path), exist_ok=True)
         with open(cand_path, "w", encoding="utf-8") as f:
             json.dump(summary, f, indent=2)
