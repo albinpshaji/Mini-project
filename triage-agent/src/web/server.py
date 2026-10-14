@@ -13,6 +13,8 @@ Supports:
 
 import os
 import io
+import re
+import json
 import time
 import base64
 import wave
@@ -20,6 +22,7 @@ import uuid
 import socket
 import logging
 import asyncio
+import threading
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 
@@ -28,7 +31,7 @@ import yaml
 import numpy as np
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, Response, JSONResponse
+from fastapi.responses import FileResponse, Response, JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -283,6 +286,50 @@ def synthesize_speech_wav(text: str) -> tuple[bytes, float]:
     return wav_buf.getvalue(), duration_s
 
 
+SUB_CLAUSE_REGEX = re.compile(
+    r"(?:[,;:\-–—]|\b(?:and|but|because|so|while|however|therefore)\b|(?<=[.!?]))\s*",
+    re.IGNORECASE
+)
+
+
+def synthesize_chunk_audio_wav(text: str) -> tuple[bytes, float, np.ndarray]:
+    """
+    Synthesizes a sub-clause chunk using Piper.
+    Returns (wav_bytes, duration_seconds, int16_array).
+    """
+    global piper_voice, streaming_guardrail
+    if piper_voice is None or not text.strip():
+        return b"", 0.0, np.array([], dtype=np.int16)
+        
+    if streaming_guardrail is not None:
+        text = streaming_guardrail.guard_chunk(text).text
+        
+    sample_rate = piper_voice.config.sample_rate
+    clean_text = text.replace("**", "").replace("*", "").replace("#", "").strip()
+    if not clean_text:
+        return b"", 0.0, np.array([], dtype=np.int16)
+        
+    chunks = []
+    for chunk in piper_voice.synthesize(clean_text):
+        chunks.append(chunk.audio_float_array)
+        
+    if not chunks:
+        return b"", 0.0, np.array([], dtype=np.int16)
+        
+    audio_combined = np.concatenate(chunks)
+    duration_s = float(len(audio_combined) / sample_rate)
+    audio_int16 = np.clip(audio_combined * 32767.0, -32768.0, 32767.0).astype(np.int16)
+    
+    wav_buf = io.BytesIO()
+    with wave.open(wav_buf, "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(sample_rate)
+        wf.writeframes(audio_int16.tobytes())
+        
+    return wav_buf.getvalue(), duration_s, audio_int16
+
+
 class ChatRequest(BaseModel):
     message: str
 
@@ -512,6 +559,151 @@ def handle_chat_turn(req: ChatRequest):
         "telemetry": telemetry,
         "vram": vram_status,
     }
+
+
+def stream_chat_generator(user_text: str):
+    """
+    Server-Sent Events (SSE) generator for live streaming text and real-time sub-clause Piper TTS audio.
+    Yields JSON lines formatted as `data: {...}\n\n`.
+    """
+    t_start = time.time()
+    session.turn_count += 1
+    session.history.append({"role": "user", "text": user_text})
+
+    # 1. Deterministic clinical safety evaluation
+    handoff_decision = evaluate_handoff(
+        user_text,
+        session.turn_count,
+        acoustic_biomarkers=None,
+        hospital_router=slm_engine.hospital_router if slm_engine else None,
+    )
+    is_emergency = handoff_decision.escalate
+    override_message = handoff_decision.override_message
+    red_flag_category = handoff_decision.red_flag_category
+
+    sample_rate = piper_voice.config.sample_rate if piper_voice else 22050
+
+    if is_emergency:
+        session.active_red_flag = red_flag_category or handoff_decision.reason
+        session.history.append({"role": "assistant", "text": override_message})
+
+        # Send full emergency override tokens
+        yield f"data: {json.dumps({'type': 'token', 'token': override_message})}\n\n"
+
+        # Synthesize audio chunk
+        wav_bytes, dur, _ = synthesize_chunk_audio_wav(override_message)
+        audio_id = str(uuid.uuid4())
+        audio_cache[audio_id] = wav_bytes
+        audio_b64 = f"data:audio/wav;base64,{base64.b64encode(wav_bytes).decode('utf-8')}" if wav_bytes else ""
+        yield f"data: {json.dumps({'type': 'audio_chunk', 'chunk_index': 0, 'audio_base64': audio_b64, 'duration': dur, 'text': override_message})}\n\n"
+
+        total_lat_ms = int((time.time() - t_start) * 1000)
+        yield f"data: {json.dumps({'type': 'done', 'agent_response': override_message, 'audio_base64': audio_b64, 'is_emergency': True, 'red_flag_category': red_flag_category, 'total_latency_ms': total_lat_ms})}\n\n"
+        return
+
+    # 2. SLM conversational generation with live streaming tokens & sub-clause TTS
+    token_stream = slm_engine.generate_stream(user_text, session.history)
+    if streaming_guardrail is not None:
+        token_stream = streaming_guardrail.guard_token_stream(token_stream, user_prompt=user_text)
+
+    buffer = ""
+    full_response_parts = []
+    chunk_index = 0
+    all_int16_chunks = []
+
+    for chunk in token_stream:
+        tok = chunk.get("token", "")
+        if not tok:
+            continue
+
+        buffer += tok
+        full_response_parts.append(tok)
+
+        # Stream token text to client immediately for live typewriter rendering
+        yield f"data: {json.dumps({'type': 'token', 'token': tok})}\n\n"
+
+        # Check sub-clause boundary (>= 3 words and punctuation/conjunction, or >= 6 words, or sentence end)
+        words = buffer.split()
+        has_sentence_end = any(p in buffer for p in [". ", "? ", "! ", ".\n", "?\n", "!\n"])
+        has_sub_clause = (len(words) >= 3 and SUB_CLAUSE_REGEX.search(buffer)) or len(words) >= 6
+
+        if has_sentence_end or has_sub_clause:
+            clause_text = None
+            parts = SUB_CLAUSE_REGEX.split(buffer, maxsplit=1)
+            if len(parts) > 1 and parts[0].strip():
+                clause_text = parts[0].strip()
+                buffer = "".join(parts[1:])
+            elif len(words) >= 6:
+                clause_text = " ".join(words[:5])
+                buffer = " ".join(words[5:])
+
+            if clause_text:
+                # Synthesize sub-clause audio chunk on the fly
+                wav_bytes, dur, int16_arr = synthesize_chunk_audio_wav(clause_text)
+                if wav_bytes:
+                    if len(int16_arr) > 0:
+                        all_int16_chunks.append(int16_arr)
+                    audio_b64 = f"data:audio/wav;base64,{base64.b64encode(wav_bytes).decode('utf-8')}"
+                    yield f"data: {json.dumps({'type': 'audio_chunk', 'chunk_index': chunk_index, 'audio_base64': audio_b64, 'duration': dur, 'text': clause_text})}\n\n"
+                    chunk_index += 1
+
+    # Remaining buffer audio
+    if buffer.strip():
+        clause_text = buffer.strip()
+        wav_bytes, dur, int16_arr = synthesize_chunk_audio_wav(clause_text)
+        if wav_bytes:
+            if len(int16_arr) > 0:
+                all_int16_chunks.append(int16_arr)
+            audio_b64 = f"data:audio/wav;base64,{base64.b64encode(wav_bytes).decode('utf-8')}"
+            yield f"data: {json.dumps({'type': 'audio_chunk', 'chunk_index': chunk_index, 'audio_base64': audio_b64, 'duration': dur, 'text': clause_text})}\n\n"
+            chunk_index += 1
+
+    assembled_response = "".join(full_response_parts).strip()
+    if contains_fabricated_placeholder(assembled_response):
+        log.warning("Placeholder fabrication detected in SLM response; substituting safe fallback.")
+        assembled_response = FABRICATION_FALLBACK_MESSAGE
+
+    session.history.append({"role": "assistant", "text": assembled_response})
+
+    # Assemble complete concatenated WAV for persistent history replay
+    full_audio_base64 = ""
+    if all_int16_chunks:
+        full_audio_int16 = np.concatenate(all_int16_chunks)
+        full_buf = io.BytesIO()
+        with wave.open(full_buf, "wb") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(sample_rate)
+            wf.writeframes(full_audio_int16.tobytes())
+        full_wav_bytes = full_buf.getvalue()
+        full_audio_id = str(uuid.uuid4())
+        audio_cache[full_audio_id] = full_wav_bytes
+        full_audio_base64 = f"data:audio/wav;base64,{base64.b64encode(full_wav_bytes).decode('utf-8')}"
+
+    # Asynchronous structured slot extraction (background thread so it never delays phone response)
+    def _extract_slots_bg(history_copy):
+        try:
+            recent = history_copy[-6:]
+            extracted = extract_symptom_slots(recent, model_name=cfg.get("slm", {}).get("model_name", "qwen3.5:4b"))
+            session.latest_slots = extracted.to_dict()
+        except Exception as e:
+            log.warning(f"Background slot extraction notice: {e}")
+
+    threading.Thread(target=_extract_slots_bg, args=(list(session.history),), daemon=True).start()
+
+    total_lat_ms = int((time.time() - t_start) * 1000)
+    vram_status = resource_scheduler.check_budget() if resource_scheduler else {}
+
+    yield f"data: {json.dumps({'type': 'done', 'agent_response': assembled_response, 'audio_base64': full_audio_base64, 'is_emergency': False, 'slots': session.latest_slots, 'total_latency_ms': total_lat_ms, 'vram': vram_status})}\n\n"
+
+
+@app.post("/api/chat/stream")
+def handle_chat_stream(req: ChatRequest):
+    """Handles text-based conversational turn with real-time SSE token and audio chunk streaming."""
+    user_text = req.message.strip()
+    if not user_text:
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+    return StreamingResponse(stream_chat_generator(user_text), media_type="text/event-stream")
 
 
 def process_audio_pipeline(audio_bytes: bytes, filename_hint: str = "speech.webm") -> dict:
@@ -775,6 +967,14 @@ async def websocket_live_endpoint(websocket: WebSocket):
                     speculator.cancel()
                 log.info("⚡ [LIVE TALK BARGE-IN] Patient interrupted via WebSocket.")
                 await websocket.send_json({"type": "interrupted"})
+            elif msg_type in ("chat", "text"):
+                text_msg = data.get("message") or data.get("text", "")
+                if text_msg:
+                    await websocket.send_json({"type": "state", "status": "processing"})
+                    for sse_event in stream_chat_generator(text_msg):
+                        if sse_event.startswith("data: "):
+                            ev_data = json.loads(sse_event[6:].strip())
+                            await websocket.send_json(ev_data)
             elif msg_type in ("audio", "voice", "voice_chunk"):
                 raw_b64 = data.get("audio_base64", "")
                 if "," in raw_b64:

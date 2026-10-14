@@ -344,6 +344,54 @@ export default function App() {
   const audioElementRef = useRef(new Audio());
   const fileInputRef = useRef(null);
 
+  // Live Streaming Audio Queue Refs
+  const autoPlayRef = useRef(autoPlay);
+  useEffect(() => {
+    autoPlayRef.current = autoPlay;
+  }, [autoPlay]);
+
+  const audioStreamQueueRef = useRef([]);
+  const isAudioQueuePlayingRef = useRef(false);
+
+  const stopAllAudio = () => {
+    audioStreamQueueRef.current = [];
+    isAudioQueuePlayingRef.current = false;
+    if (audioElementRef.current) {
+      audioElementRef.current.pause();
+      audioElementRef.current.currentTime = 0;
+    }
+    setPlayingAudioId(null);
+  };
+
+  const playNextStreamChunk = () => {
+    if (audioStreamQueueRef.current.length === 0) {
+      isAudioQueuePlayingRef.current = false;
+      setPlayingAudioId(null);
+      return;
+    }
+    isAudioQueuePlayingRef.current = true;
+    const chunk = audioStreamQueueRef.current.shift();
+    if (audioElementRef.current) {
+      audioElementRef.current.src = chunk.audioBase64;
+      setPlayingAudioId(chunk.msgId);
+      audioElementRef.current.play().catch((e) => {
+        console.warn('Audio chunk playback warning:', e);
+        playNextStreamChunk();
+      });
+      audioElementRef.current.onended = () => {
+        playNextStreamChunk();
+      };
+    }
+  };
+
+  const enqueueAudioChunk = (audioBase64, msgId) => {
+    if (!audioBase64) return;
+    audioStreamQueueRef.current.push({ audioBase64, msgId });
+    if (!isAudioQueuePlayingRef.current) {
+      playNextStreamChunk();
+    }
+  };
+
   // Live Talk Mode State (ChatGPT Live Full-Duplex Style)
   const [isLiveTalkOpen, setIsLiveTalkOpen] = useState(() => {
     try {
@@ -438,6 +486,7 @@ export default function App() {
   // Reset Session
   const handleReset = async () => {
     if (!window.confirm('Start a new patient intake session?')) return;
+    stopAllAudio();
     try {
       await fetch('/api/reset', { method: 'POST' });
       setMessages([
@@ -497,6 +546,7 @@ export default function App() {
   // Audio Playback
   const playAudio = (audioBase64, msgId) => {
     if (!audioBase64) return;
+    stopAllAudio();
     try {
       audioElementRef.current.src = audioBase64;
       audioElementRef.current.play().then(() => {
@@ -512,10 +562,13 @@ export default function App() {
     }
   };
 
-  // Send Text Turn
+  // Send Text Turn with Live Streaming Tokens and Real-Time Sub-Clause Audio
   const handleSendText = async (textToSend) => {
     const text = (textToSend || inputText).trim();
     if (!text || isProcessing) return;
+
+    // Stop any ongoing audio playback
+    stopAllAudio();
 
     setInputText('');
     const userMsg = {
@@ -525,29 +578,141 @@ export default function App() {
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     };
 
-    setMessages((prev) => [...prev, userMsg]);
+    const asstMsgId = 'asst-' + Date.now();
+    const asstMsg = {
+      id: asstMsgId,
+      role: 'assistant',
+      text: '',
+      audioBase64: '',
+      isEmergency: false,
+      redFlagCategory: null,
+      speculative: null,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isStreaming: true,
+    };
+
+    setMessages((prev) => [...prev, userMsg, asstMsg]);
     setIsProcessing(true);
 
     try {
-      const res = await fetch('/api/chat', {
+      const res = await fetch('/api/chat/stream', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: text }),
       });
+
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      processAssistantTurn(data);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
+      let accumulatedText = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith('data: ')) continue;
+          const jsonStr = trimmed.slice(6);
+          try {
+            const data = JSON.parse(jsonStr);
+
+            if (data.type === 'token') {
+              accumulatedText += data.token;
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === asstMsgId
+                    ? { ...m, text: accumulatedText }
+                    : m
+                )
+              );
+            } else if (data.type === 'audio_chunk') {
+              // Enqueue audio chunk for live playback as LLM outputs words
+              if (autoPlayRef.current && data.audio_base64) {
+                enqueueAudioChunk(data.audio_base64, asstMsgId);
+              }
+            } else if (data.type === 'done') {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === asstMsgId
+                    ? {
+                        ...m,
+                        text: data.agent_response || accumulatedText,
+                        audioBase64: data.audio_base64,
+                        isEmergency: data.is_emergency,
+                        redFlagCategory: data.red_flag_category,
+                        isStreaming: false,
+                      }
+                    : m
+                )
+              );
+
+              if (data.is_emergency) {
+                setActiveEmergency({
+                  category: data.red_flag_category || 'EMERGENCY ESCALATION',
+                  message: data.agent_response,
+                });
+              }
+              if (data.slots) setSlots(data.slots);
+              if (data.vram) setVram(data.vram);
+              if (data.total_latency_ms) {
+                setTelemetry((prev) => ({
+                  ...prev,
+                  total_latency_ms: data.total_latency_ms,
+                  slm_latency_ms: data.total_latency_ms,
+                }));
+              }
+            }
+          } catch (pe) {
+            console.warn('SSE parse error:', pe);
+          }
+        }
+      }
     } catch (e) {
-      console.error('Chat error:', e);
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: 'err-' + Date.now(),
-          role: 'assistant',
-          text: 'I encountered an issue contacting the clinical model. Please ensure Ollama is active.',
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        },
-      ]);
+      console.error('Streaming chat error, attempting standard fallback:', e);
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === asstMsgId
+              ? {
+                  ...m,
+                  text: data.agent_response,
+                  audioBase64: data.audio_base64,
+                  isEmergency: data.is_emergency,
+                  redFlagCategory: data.red_flag_category,
+                  speculative: data.speculative,
+                  isStreaming: false,
+                }
+              : m
+          )
+        );
+        processAssistantTurn(data);
+      } catch (fallbackErr) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === asstMsgId
+              ? {
+                  ...m,
+                  text: 'I encountered an issue contacting the clinical model. Please ensure Ollama is active.',
+                  isStreaming: false,
+                }
+              : m
+          )
+        );
+      }
     } finally {
       setIsProcessing(false);
     }
@@ -1235,23 +1400,38 @@ export default function App() {
                     </span>
                     <span>{m.time}</span>
                   </div>
-                  <div>{m.text}</div>
+                  <div>
+                    {m.text}
+                    {m.isStreaming && (
+                      <span className="inline-block w-1.5 h-3.5 ml-1 bg-emerald-400 animate-pulse align-middle" />
+                    )}
+                  </div>
                   {m.role === 'assistant' && (
                     <div className="msg-actions-row">
-                      {m.audioBase64 && (
+                      {(m.audioBase64 || playingAudioId === m.id) && (
                         <button
                           type="button"
                           className={`btn-play-voice ${playingAudioId === m.id ? 'playing' : ''}`}
-                          onClick={() => playAudio(m.audioBase64, m.id)}
+                          onClick={() => {
+                            if (playingAudioId === m.id) {
+                              stopAllAudio();
+                            } else if (m.audioBase64) {
+                              playAudio(m.audioBase64, m.id);
+                            }
+                          }}
                         >
-                          <Volume2 size={13} />
-                          <span>{playingAudioId === m.id ? 'Speaking...' : 'Play Voice'}</span>
+                          <Volume2 size={13} className={playingAudioId === m.id ? 'animate-pulse' : ''} />
+                          <span>{playingAudioId === m.id ? 'Speaking live...' : 'Play Voice'}</span>
                         </button>
                       )}
 
                       {/* Speculation status badge */}
                       {m.isEmergency ? (
                         <span className="badge-pill emergency">🚨 Emergency Override</span>
+                      ) : m.isStreaming ? (
+                        <span className="badge-pill committed animate-pulse">
+                          ⚡ Streaming Tokens & TTS
+                        </span>
                       ) : m.speculative?.committed ? (
                         <span className="badge-pill committed">
                           ⚡ Speculation Committed (0ms SLM wait, Sim: {Math.round((m.speculative.similarity || 0.8) * 100)}%)
@@ -1271,7 +1451,7 @@ export default function App() {
               </div>
             ))}
 
-            {isProcessing && (
+            {isProcessing && !messages.some((m) => m.isStreaming) && (
               <div className="typing-row">
                 <span className="pulse-dot"></span>
                 <span>Triage nurse analyzing symptoms...</span>
