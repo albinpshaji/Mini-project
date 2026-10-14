@@ -1,10 +1,14 @@
 """
-Structured symptom slot extraction.
+Unconstrained (No-GCD) symptom slot extraction.
+Grounding: Negative Control Branch (Free-form generation without grammar constraint or format="json").
 
-Runs as a SEPARATE call from the conversational response the patient hears --
-extracts a structured JSON record using Ollama's format="json" mode.
+Features:
+  - Zero schema constraints (no Ollama format="json", no GBNF grammar).
+  - Unconstrained LLM text generation.
+  - Regex / string extraction fallback to parse JSON if emitted in the output.
 """
 
+import re
 import json
 import ollama
 from dataclasses import dataclass, asdict
@@ -34,6 +38,8 @@ class SymptomSlots:
     red_flag_present: bool = False
     recommended_department: Optional[str] = None
     confidence: str = "low"
+    acuity_level: Optional[int] = None
+    clinical_rationale: Optional[str] = None
     _raw_parse_error: Optional[str] = None
 
     def __post_init__(self):
@@ -49,26 +55,63 @@ class SymptomSlots:
 def _conversation_to_text(conversation_history: list) -> str:
     lines = []
     for turn in conversation_history:
-        speaker = "Patient" if turn["role"] == "user" else "Assistant"
-        lines.append(f"{speaker}: {turn['text']}")
+        speaker = "Patient" if turn.get("role") == "user" else "Assistant"
+        lines.append(f"{speaker}: {turn.get('text', '')}")
     return "\n".join(lines)
 
 
-def extract_symptom_slots(conversation_history: list, model_name: str = "qwen2.5:1.5b-instruct") -> SymptomSlots:
+def _extract_json_block(text: str) -> Optional[dict]:
+    """Attempts to find and parse a JSON object from free-form LLM output."""
+    # 1. Try direct parse
+    try:
+        return json.loads(text.strip())
+    except Exception:
+        pass
+
+    # 2. Try markdown fenced block ```json ... ```
+    match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group(1))
+        except Exception:
+            pass
+
+    # 3. Try finding outermost braces { ... }
+    match = re.search(r"(\{.*\})", text, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group(1))
+        except Exception:
+            pass
+
+    return None
+
+
+def extract_symptom_slots(conversation_history: list, model_name: str = "qwen3.5:4b") -> SymptomSlots:
+    """
+    Unconstrained extraction: Calls LLM without any grammar constraint or format='json'.
+    Relies purely on prompt adherence and post-hoc regex parsing.
+    """
     conversation_text = _conversation_to_text(conversation_history)
     prompt = f"{SLOT_SCHEMA_DESCRIPTION}\n\nConversation:\n{conversation_text}"
 
     try:
+        # NO format="json" or grammar constraint!
         response = ollama.chat(
             model=model_name,
             messages=[{"role": "user", "content": prompt}],
-            format="json",
             think=False,
             keep_alive="24h",
-            options={"num_ctx": 3072, "temperature": 0.1, "num_predict": 120},
+            options={"num_ctx": 3072, "temperature": 0.1, "num_predict": 180},
         )
-        raw_text = response["message"]["content"]
-        parsed = json.loads(raw_text)
+        raw_text = response.get("message", {}).get("content", "")
+        parsed = _extract_json_block(raw_text)
+
+        if not parsed:
+            return SymptomSlots(
+                confidence="low",
+                _raw_parse_error=f"Unconstrained output failed JSON parsing. Raw output: {raw_text[:80]}..."
+            )
 
         return SymptomSlots(
             chief_complaint=parsed.get("chief_complaint"),
@@ -79,5 +122,5 @@ def extract_symptom_slots(conversation_history: list, model_name: str = "qwen2.5
             recommended_department=parsed.get("recommended_department"),
             confidence=parsed.get("confidence", "low"),
         )
-    except (json.JSONDecodeError, KeyError, TypeError) as e:
+    except Exception as e:
         return SymptomSlots(confidence="low", _raw_parse_error=str(e))

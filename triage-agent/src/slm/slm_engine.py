@@ -88,7 +88,7 @@ class SLMEngine:
         messages.append({"role": "user", "content": annotated_transcript})
         return messages
 
-    def generate_stream(self, transcript: str, conversation_history=None, grammar=None, routing_hint: str = None):
+    def generate_stream(self, transcript: str, conversation_history=None, routing_hint: str = None):
         """
         Streams response tokens for a given (possibly partial) transcript.
         Yields dicts: {"token": str, "done": bool, "cancelled": bool}
@@ -120,10 +120,10 @@ class SLMEngine:
             if finished:
                 return
 
-    def generate(self, transcript: str, conversation_history=None, grammar=None, routing_hint: str = None) -> str:
+    def generate(self, transcript: str, conversation_history=None, routing_hint: str = None) -> str:
         """Non-streaming convenience wrapper -- collects full response."""
         out = []
-        for chunk in self.generate_stream(transcript, conversation_history, grammar, routing_hint=routing_hint):
+        for chunk in self.generate_stream(transcript, conversation_history, routing_hint=routing_hint):
             out.append(chunk["token"])
             if chunk["done"]:
                 break
