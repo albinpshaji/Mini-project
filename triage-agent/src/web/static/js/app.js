@@ -175,6 +175,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // --- Reset Session ---
   btnReset.addEventListener("click", async () => {
     if (!confirm("Start a new patient triage session?")) return;
+    stopAllAudio();
     try {
       await fetch("/api/reset", { method: "POST" });
       chatFeed.innerHTML = "";
@@ -214,20 +215,59 @@ document.addEventListener("DOMContentLoaded", () => {
 
   btnSend.addEventListener("click", sendMessage);
 
-  // --- Send Text Message Turn ---
+  // --- Send Text Message Turn with Live Streaming Tokens & Real-Time Sub-Clause TTS ---
   async function sendMessage() {
     const text = userInput.value.trim();
     if (!text || isProcessing) return;
+
+    // Stop ongoing audio
+    stopAllAudio();
 
     userInput.value = "";
     userInput.style.height = "auto";
 
     addUserMessage(text);
-    const typingIndicator = addTypingIndicator();
     setProcessing(true);
 
+    // Create streaming assistant message card
+    const card = document.createElement("div");
+    card.className = "msg-card msg-assistant";
+    card.innerHTML = `
+      <div class="msg-avatar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+          <circle cx="12" cy="7" r="4"/>
+          <path d="M5.5 21v-2a6.5 6.5 0 0 1 13 0v2"/>
+        </svg>
+      </div>
+      <div class="msg-bubble">
+        <div class="msg-meta">
+          <span class="msg-author">Triage Nurse AI</span>
+          <span class="msg-time">${formatTime()}</span>
+        </div>
+        <div class="msg-text"><span class="streaming-text"></span><span class="streaming-cursor" style="display:inline-block; width:6px; height:14px; background:var(--teal-primary, #10b981); margin-left:3px; animation: pulse 1s infinite; vertical-align: middle;"></span></div>
+        <div class="msg-actions">
+          <button type="button" class="btn-audio-play hidden" title="Listen to response">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13">
+              <polygon points="5 3 19 12 5 21 5 3"/>
+            </svg>
+            <span>Speaking live...</span>
+          </button>
+          <span class="telemetry-pill spec-committed">⚡ Streaming Tokens & TTS</span>
+        </div>
+      </div>
+    `;
+    chatFeed.appendChild(card);
+    scrollToBottom();
+
+    const streamTextEl = card.querySelector(".streaming-text");
+    const streamCursorEl = card.querySelector(".streaming-cursor");
+    const playBtn = card.querySelector(".btn-audio-play");
+    const metaAuthor = card.querySelector(".msg-author");
+    let accumulatedText = "";
+    let finalAudioBase64 = "";
+
     try {
-      const response = await fetch("/api/chat", {
+      const response = await fetch("/api/chat/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: text }),
@@ -237,16 +277,80 @@ document.addEventListener("DOMContentLoaded", () => {
         throw new Error(`Server returned status ${response.status}`);
       }
 
-      const data = await response.json();
-      removeTypingIndicator(typingIndicator);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      let buffer = "";
 
-      handleAssistantTurn(data);
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop();
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith("data: ")) continue;
+          const jsonStr = trimmed.slice(6);
+          try {
+            const data = JSON.parse(jsonStr);
+
+            if (data.type === "token") {
+              accumulatedText += data.token;
+              streamTextEl.textContent = accumulatedText;
+              scrollToBottom();
+            } else if (data.type === "audio_chunk") {
+              if (toggleAutoPlay.checked && data.audio_base64) {
+                playBtn.classList.remove("hidden");
+                enqueueAudioChunk(data.audio_base64, playBtn);
+              }
+            } else if (data.type === "done") {
+              if (streamCursorEl) streamCursorEl.remove();
+              streamTextEl.textContent = data.agent_response || accumulatedText;
+              finalAudioBase64 = data.audio_base64;
+
+              if (finalAudioBase64) {
+                playBtn.classList.remove("hidden");
+                if (!isAudioStreamPlaying) {
+                  playBtn.querySelector("span").textContent = "Play Voice";
+                }
+                playBtn.onclick = () => playAudio(finalAudioBase64, playBtn);
+              }
+
+              if (data.is_emergency) {
+                card.classList.add("msg-emergency");
+                metaAuthor.textContent = "🚨 Emergency Triage Directive";
+                emergencyBanner.classList.remove("hidden");
+                emergencyCategory.textContent = (data.red_flag_category || "EMERGENCY ESCALATION").toUpperCase();
+                safetyIndicatorBox.className = "safety-indicator-box danger";
+                safetyIndicatorText.textContent = `RED-FLAG TRIGGERED (${data.red_flag_category || "Urgent"})`;
+              }
+
+              if (data.slots) updateSlotDisplay(data.slots);
+              if (data.telemetry) updateTelemetryDisplay(data.telemetry, data.vram);
+            }
+          } catch (pe) {
+            console.warn("SSE chunk parse error:", pe);
+          }
+        }
+      }
     } catch (err) {
-      console.error("Chat error:", err);
-      removeTypingIndicator(typingIndicator);
-      addAssistantMessage(
-        "I encountered a connection issue communicating with the local clinical reasoning model. Please ensure Ollama is running and try again."
-      );
+      console.error("Streaming chat error, falling back to /api/chat:", err);
+      if (streamCursorEl) streamCursorEl.remove();
+      try {
+        const fbRes = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text }),
+        });
+        if (!fbRes.ok) throw new Error("Fallback failed");
+        const fbData = await fbRes.json();
+        card.remove();
+        handleAssistantTurn(fbData);
+      } catch (fbErr) {
+        streamTextEl.textContent = "I encountered a connection issue communicating with the local clinical reasoning model. Please ensure Ollama is running and try again.";
+      }
     } finally {
       setProcessing(false);
     }
@@ -439,9 +543,63 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // --- Live Streaming Audio Queue ---
+  const audioStreamQueue = [];
+  let isAudioStreamPlaying = false;
+
+  function stopAllAudio() {
+    audioStreamQueue.length = 0;
+    isAudioStreamPlaying = false;
+    if (ttsAudioPlayer) {
+      ttsAudioPlayer.pause();
+      ttsAudioPlayer.currentTime = 0;
+    }
+    if (activeAudioBtn) {
+      activeAudioBtn.classList.remove("playing");
+      activeAudioBtn.querySelector("span").textContent = "Play Voice";
+      activeAudioBtn = null;
+    }
+  }
+
+  function playNextStreamChunk() {
+    if (audioStreamQueue.length === 0) {
+      isAudioStreamPlaying = false;
+      if (activeAudioBtn) {
+        activeAudioBtn.classList.remove("playing");
+        activeAudioBtn.querySelector("span").textContent = "Replay Voice";
+        activeAudioBtn = null;
+      }
+      return;
+    }
+    isAudioStreamPlaying = true;
+    const chunk = audioStreamQueue.shift();
+    ttsAudioPlayer.src = chunk.audioBase64;
+    if (chunk.btn) {
+      chunk.btn.classList.add("playing");
+      chunk.btn.querySelector("span").textContent = "Speaking live...";
+      activeAudioBtn = chunk.btn;
+    }
+    ttsAudioPlayer.play().catch((e) => {
+      console.warn("Audio chunk play error:", e);
+      playNextStreamChunk();
+    });
+    ttsAudioPlayer.onended = () => {
+      playNextStreamChunk();
+    };
+  }
+
+  function enqueueAudioChunk(audioBase64, btn) {
+    if (!audioBase64) return;
+    audioStreamQueue.push({ audioBase64, btn });
+    if (!isAudioStreamPlaying) {
+      playNextStreamChunk();
+    }
+  }
+
   // --- Audio Player Controller ---
   function playAudio(audioDataUri, btn) {
     if (!audioDataUri) return;
+    stopAllAudio();
 
     if (activeAudioBtn && activeAudioBtn !== btn) {
       activeAudioBtn.classList.remove("playing");
