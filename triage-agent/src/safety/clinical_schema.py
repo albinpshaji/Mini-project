@@ -99,3 +99,60 @@ string ::= "\"" ([^"\\] | "\\" (["\\/bfnrt] | "u" [0-9a-fA-F] [0-9a-fA-F] [0-9a-
 ws ::= [ \t\n\r]*
 """
     return gbnf.strip()
+
+
+class CoreClinicalSlots(BaseModel):
+    """
+    Compact clinical slot extraction schema.
+    Reduces LLM generation token budget from ~75 tokens to ~20 tokens.
+    Literature: XGrammar (MLSys 2025) & EMNLP 2023 GCD.
+    """
+    model_config = ConfigDict(extra="forbid")
+
+    chief_complaint: str = Field(
+        ...,
+        description="The primary clinical complaint or presenting symptom in a concise phrase"
+    )
+    symptom_duration: Optional[str] = Field(
+        default=None,
+        description="Reported duration of symptoms (e.g. '30 minutes', '2 days', null if not stated)"
+    )
+    pain_severity: Optional[Literal["none", "mild", "moderate", "severe"]] = Field(
+        default=None,
+        description="Clinical pain severity level based on patient description"
+    )
+    recommended_department: Literal[
+        "Emergency",
+        "General Medicine",
+        "Cardiology",
+        "Orthopedics",
+        "Pediatrics",
+        "ENT & Airway Clinic",
+        "Neurology"
+    ] = Field(
+        ...,
+        description="Clinical department referral destination"
+    )
+
+
+def get_core_clinical_slots_json_schema() -> Dict[str, Any]:
+    """Generates strict JSON schema for CoreClinicalSlots constrained decoding."""
+    return CoreClinicalSlots.model_json_schema()
+
+
+def generate_core_clinical_slots_gbnf() -> str:
+    """
+    Generates Context-Free Grammar in GBNF format for llama.cpp logit masking
+    on CoreClinicalSlots.
+    """
+    gbnf = r"""
+root ::= "{" ws "\"chief_complaint\":" ws string "," ws "\"symptom_duration\":" ws (string | "null") "," ws "\"pain_severity\":" ws pain_level "," ws "\"recommended_department\":" ws department ws "}"
+
+pain_level ::= "\"none\"" | "\"mild\"" | "\"moderate\"" | "\"severe\"" | "null"
+department ::= "\"Emergency\"" | "\"General Medicine\"" | "\"Cardiology\"" | "\"Orthopedics\"" | "\"Pediatrics\"" | "\"ENT & Airway Clinic\"" | "\"Neurology\""
+
+string ::= "\"" ([^"\\] | "\\" (["\\/bfnrt] | "u" [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F] [0-9a-fA-F]))* "\""
+ws ::= [ \t\n\r]*
+"""
+    return gbnf.strip()
+

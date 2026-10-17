@@ -21,42 +21,56 @@ class RedFlagResult:
 RED_FLAG_PATTERNS = {
     "cardiac": [
         r"\bchest pain\b",
-        r"\bchest (feels|feeling) (tight|heavy|crushing)\b",
-        r"\b(pain|radiat\w*|goes|shooting) (in|down|to|into) (my )?(left )?arm\b",
-        r"\bheart (racing|pounding) and (dizzy|faint)\b",
-        r"\bheart (is )?(racing|pounding)\b.{0,30}\b\d{2,3}\s*(bpm|beats per minute)?\b",
+        r"\b(pain|pressure|tightness|heaviness|crushing|squeezing)\s+(in|on)\s+(my\s+)?chest\b",
+        r"\bchest\s+(feels|feeling|tightness|pressure|heaviness|crushing)\b",
+        r"\b(pain|radiat\w*|goes|shooting)\s+(in|down|to|into)\s+(my\s+)?(left\s+|both\s+)?arms?\b",
+        r"\bheart\s+(is\s+)?(racing|pounding)\b.{0,40}\b(dizzy|faint|lightheaded)\b",
+        r"\bheart\s+(is\s+)?(racing|pounding)\b.{0,30}\b\d{2,3}\s*(bpm|beats per minute)?\b",
         r"\b(1[2-9]\d|[2-9]\d\d)\s*(bpm|beats per minute)\b",
     ],
     "respiratory": [
-        r"\b(can'?t|cannot) breathe\b",
-        r"\bdifficulty breathing\b",
-        r"\bshort(ness)? of breath\b",
-        r"\bgasping for air\b",
-        r"\bturning blue\b",
+        r"\b(can'?t|cannot)\s+catch\s+(my\s+)?breath\b",
+        r"\b(can'?t|cannot)\s+breathe\b",
+        r"\bdifficulty\s+breathing\b",
+        r"\bshort(ness)?\s+of\s+breath\b",
+        r"\bgasping\s+for\s+air\b",
+        r"\bturning\s+blue\b",
         r"\blips\b.{0,25}\bblue\b",
-        r"\bhard(ly)? to breathe\b",
+        r"\bhard(ly)?\s+to\s+breathe\b",
+        r"\bstridor\b",
+        r"\b(severe asthma attack|rescue inhaler (is )?not (working|helping))\b",
     ],
     "neurological": [
-        r"\b(sudden|severe) (headache|confusion)\b",
-        r"\bslurred speech\b",
-        r"\bface\b.{0,20}\bdroop",
-        r"\b(can'?t|cannot) move (my|one side)\b",
-        r"\blost consciousness\b",
-        r"\bpassed out\b",
+        r"\b(sudden|severe)\s+(headache|confusion)\b",
+        r"\bworst\s+headache\b",
+        r"\bthunderclap\b",
+        r"\bslurred\s+speech\b",
+        r"\bface\b.{0,25}\bdroop",
+        r"\b(can'?t|cannot|unable to)\s+speak\b",
+        r"\b(can'?t|cannot)\s+move\s+(my|one side)\b",
+        r"\b(sudden numbness|cannot hold|unable to hold|numbness.{0,25}(hand|arm|leg))\b",
+        r"\b(double vision|difficulty swallowing|dysphagia)\b",
+        r"\b(rigid neck|stiff neck|neck stiffness|sensitivity to (bright )?light|photophobia)\b",
+        r"\blost\s+consciousness\b",
+        r"\bpassed\s+out\b",
         r"\bfainted\b",
         r"\bseizure\b",
-        r"\bone side (of|weak)",
+        r"\bone\s+side\s+(of|weak)",
     ],
     "bleeding": [
-        r"\bsevere bleeding\b",
-        r"\bwon'?t stop bleeding\b",
-        r"\bvomiting blood\b",
-        r"\bblood in (my )?(stool|vomit)\b",
-        r"\bheavy blood loss\b",
+        r"\b(pumping|pulsatile|arterial)\s+(bright\s+red\s+)?blood\b",
+        r"\bsevere\s+bleeding\b",
+        r"\bwon'?t\s+stop\s+bleeding\b",
+        r"\b(coughing|vomiting|spitting)\b.{0,40}\bblood\b",
+        r"\b(coffee ground|dark blood|vomiting.{0,25}blood)\b",
+        r"\b(black tarry|melena|blood in stool)\b",
+        r"\bblood\s+in\s+(my\s+)?(stool|vomit)\b",
+        r"\bheavy\s+blood\s+loss\b",
+        r"\b(car accident|seatbelt sign|high speed collision)\b",
     ],
     "allergic": [
-        r"\bthroat (is )?closing\b",
-        r"\bswelling (of|in) (my )?(face|throat|lips)\b",
+        r"\bthroat\s+(is\s+)?(swelling|closing)|swelling shut\b",
+        r"\bswelling\s+(of|in)\s+(my\s+)?(face|throat|lips)\b",
         r"\banaphyla",
     ],
 }
@@ -72,7 +86,7 @@ _NEGATION_RE = re.compile(
 )
 
 _MILD_QUALIFIER_RE = re.compile(
-    r"\b(a bit of|a bit|a little bit of|a little|mild|mildly|slight|slightly|minor|barely|not much|not too much|manageable|when i cough|when coughing)\b",
+    r"\b(a bit of|a bit|a little bit of|a little|mild|mildly|slight|slightly|minor|barely|not much|not too much|manageable|when i cough|when coughing|only when lying|when i press|press on|ribs?|tender to touch|costochondritis)\b",
     re.IGNORECASE,
 )
 
@@ -82,7 +96,7 @@ _ACUTE_RESPIRATORY_RE = re.compile(
 )
 
 _ACUTE_CARDIAC_RE = re.compile(
-    r"\b(severe|sudden|acute|extreme|crushing|heavy|squeezing|radiat|arm|jaw|neck|back|dizzy|faint|sweat|sweating|unbearable|tight|pressure)\b",
+    r"\b(severe|sudden|acute|extreme|crushing|heavy\s+(pain|chest|pressure|tightness|sweat)|squeezing|radiat\w*|arm|jaw|neck|back|dizzy|faint|sweat|sweating|unbearable|tight|pressure)\b",
     re.IGNORECASE,
 )
 
