@@ -1,4 +1,4 @@
-# Phase 2 Implementation Blueprint & Latency Optimization Roadmap
+# Phase 2 Implementation Blueprint & Latency Optimization Roadmap(phase 2 implemented)
 
 **Document Purpose:** Actionable technical specification for implementing **Phase 2: Static System Prompt Prefix KV-Cache Pinning (`num_keep`)**, with a complete sequential roadmap for **Phases 3, 4, and 5**.  
 **Starting Branch:** `feature/compact-gcd-phase1` (Commit `86f521e`)  
