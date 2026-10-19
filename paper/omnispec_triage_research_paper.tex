@@ -65,7 +65,7 @@
 
 \IEEEtitleabstractindextext{%
 \begin{abstract}
-Conversational voice artificial intelligence in emergency department (ED) triage has long been constrained by an unforgiving engineering trilemma: (1) cascaded pipeline latencies ($3.2$--$7.0$\,s) breaking natural clinical conversational cadence; (2) strict hardware memory boundaries on consumer edge GPUs ($4$\,GB VRAM physical ceilings) that preclude concurrent dual-model deployment; and (3) instruction-following degradation in sub-4B quantized small language models (SLMs), leading to severe clinical hazards including hallucinated medication dosages, out-of-vocabulary Electronic Health Record (EHR) schema corruption, and catastrophic under-triage of acute medical life threats. In this paper, we propose \textbf{OmniSpec-Triage}, an edge-native, multimodal, full-duplex conversational triage framework deployed on a strictly constrained $4$\,GB consumer GPU (NVIDIA GeForce GTX 1650 / RTX 3050 Ti Laptop). We develop an integrated architectural optimization framework: (i) Decoupled Grammar-Constrained Decoding (GCD) coupled with microsecond deterministic Korean Triage and Acuity Scale (KTAS) scoring offloading ($13.7\,\mu$s); (ii) static system prompt prefix Key-Value (KV) cache retention ($1{,}057$ tokens) via low-level engine context reuse, accelerating cold startup prefill by $77\times$ ($6{,}960.3$\,ms to $90.0$\,ms) and warm turn prefill by $5.7\times$ ($487.5$\,ms to $85.0$\,ms); (iii) acoustic pre-warming and sub-clause pipelining, cutting first-audio synthesis dispatch by $1{,}370\times$ ($68.5$\,ms to $0.05$\,ms) with a verified $0.0\%$ buffer underrun rate and $+2{,}387.9$\,ms playback lead margin; (iv) zero-parameter Lookahead Jacobi speculation and acoustic pre-emission, elevating raw SLM decoding throughput by $+22.5\%$ ($19.60$ to $24.24$\,tok/s) at zero additional VRAM cost; and (v) hierarchical 3-tier attention anchor pruning, compacting multi-turn KV memory by $85.9\%$ ($320$\,MB to $45.0$\,MB) and overcoming 128-bit memory bus bandwidth saturation on extended consultations. Across an exhaustive benchmark of $60$ clinical vignettes, $100$ adversarial probes, $20$ invariant trajectories, and longitudinal telemetry records, OmniSpec-Triage delivers a median glass-to-glass turnaround of $2{,}012.2$\,ms ($595.5$\,ms on speculative commits), $100.0\%$ schema validity, $100.0\%$ adversarial guardrail interception, $94.4\%$ long-context clinical needle retention, and near-perfect physician acuity concordance ($\kappa = 0.9272$) with zero critical under-triage, while permanently locking resident VRAM at $3{,}075.0$\,MB.
+Conversational voice artificial intelligence in emergency department (ED) triage has long been constrained by an unforgiving engineering trilemma: (1) cascaded pipeline latencies ($3.2$--$7.0$\,s) breaking natural clinical conversational cadence; (2) strict hardware memory boundaries on consumer edge GPUs ($4$\,GB VRAM physical ceilings) that preclude concurrent dual-model deployment; and (3) instruction-following degradation in sub-4B quantized small language models (SLMs), leading to severe clinical hazards including hallucinated medication dosages, out-of-vocabulary Electronic Health Record (EHR) schema corruption, and catastrophic under-triage of acute medical life threats. In this paper, we propose \textbf{OmniSpec-Triage}, an edge-native, multimodal, full-duplex conversational triage framework deployed on a strictly constrained $4$\,GB consumer GPU (NVIDIA GeForce GTX 1650 / RTX 3050 Ti Laptop). We develop an integrated architectural optimization framework: (i) Decoupled Grammar-Constrained Decoding (GCD) coupled with microsecond deterministic Korean Triage and Acuity Scale (KTAS) scoring offloading ($13.7\,\mu$s); (ii) static system prompt prefix Key-Value (KV) cache retention ($1{,}057$ tokens) via low-level engine context reuse, accelerating cold startup prefill by $77\times$ ($6{,}960.3$\,ms to $90.0$\,ms) and warm turn prefill by $5.7\times$ ($487.5$\,ms to $85.0$\,ms); (iii) acoustic pre-warming and sub-clause pipelining, cutting first-audio synthesis dispatch by $1{,}370\times$ ($68.5$\,ms to $0.05$\,ms) with a verified $0.0\%$ buffer underrun rate and $+2{,}387.9$\,ms playback lead margin; (iv) zero-parameter Lookahead Jacobi speculation and acoustic pre-emission, elevating raw SLM decoding throughput by $+22.5\%$ ($19.60$ to $24.24$\,tok/s) at zero additional VRAM cost; (v) hierarchical 3-tier attention anchor pruning, compacting multi-turn KV memory by $85.9\%$ ($320$\,MB to $45.0$\,MB) and overcoming 128-bit memory bus bandwidth saturation on extended consultations; and (vi) continuous speculative shift and verification (CSSV) paired with dyspnea-aware adaptive endpointing, salvaging $62.5\%$ of drafted tokens ($23.6$ tokens/turn) on divergent turns, slashing rollback verification latency by $25.4\times$ ($889.0$\,ms to $35.0$\,ms), and collapsing median glass-to-glass turnaround to $1{,}370.0$\,ms ($451.1$\,ms TTFA on divergent turns) with $0$ false speculative commits on clinical polarity shifts. Across an exhaustive benchmark of $60$ clinical vignettes, $100$ adversarial probes, $20$ invariant trajectories, and longitudinal telemetry records, OmniSpec-Triage delivers a median glass-to-glass turnaround of $1{,}370.0$\,ms ($595.5$\,ms on speculative commits), $100.0\%$ schema validity, $100.0\%$ adversarial guardrail interception, $94.4\%$ long-context clinical needle retention, and near-perfect physician acuity concordance ($\kappa = 0.9272$) with zero critical under-triage, while permanently locking resident VRAM at $3{,}075.0$\,MB.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -513,6 +513,30 @@ Grounded in DuoAttention~\cite{duoattention2025} and DropKV~\cite{dropkv2026}, w
 \end{itemize}
 Active multi-turn KV memory collapses from $320$\,MB to $45.0$\,MB ($-85.9\%$), overcoming memory bus saturation and accelerating late Turn 12 throughput by $1.10\times$.
 
+\subsection{Continuous Speculative Shift \& Verification (CSSV) \& Dyspnea-Aware Endpointing}
+While Phase 4/5 speculation accelerated matching utterances, divergent turns suffered from an acute $889$\,ms binary rollback penalty. When a patient expanded on symptoms (e.g., adding radiation or onset duration mid-utterance), lexical similarity dropped below threshold ($\text{Sim} < 0.70$), discarding drafted tokens, clearing the cache, and re-prefilling from scratch.
+
+To eliminate this rollback cliff, we introduce \textbf{Continuous Speculative Shift \& Verification (CSSV)} paired with \textbf{Dyspnea-Aware Endpointing}:
+\begin{enumerate}
+    \item \textbf{Parallel Verification Batch:} Instead of flushing the draft $Y_{\text{spec}} = [y_1, \dots, y_K]$, CSSV constructs a concatenated verification sequence:
+    \begin{equation}
+        \mathcal{B}_{\text{verify}} = \Delta T_f \oplus Y_{\text{spec}}
+    \end{equation}
+    where $\Delta T_f = T_f \setminus T_p$ represents the user's transcript delta. A single parallel forward pass computes logits over all candidate positions simultaneously.
+    \item \textbf{First Divergence Horizon $j^*$:} The verified prefix $Y_{\text{commit}}$ is determined by identifying the first divergence index:
+    \begin{equation}
+        j^* = \min \{ j \in [1, K] \mid y_j \neq \arg\max P(\cdot \mid T_f, y_{<j}) \}
+    \end{equation}
+    The prefix $Y_{\text{commit}} = [y_1, \dots, y_{j^*-1}]$ is immediately dispatched to the Piper neural TTS worker via an asynchronous callback ($35.0$\,ms verification latency), while the corrected token $y'_{j^*}$ is appended for free.
+    \item \textbf{In-VRAM Positional RoPE Cache Eviction:} Using low-level sequence manipulation (\texttt{llama\_kv\_cache\_seq\_shift}), non-matching intermediate KV tokens are evicted directly inside VRAM tensor memory, shifting subsequent RoPE rotary embeddings by $-n$ positions without re-prefilling history.
+    \item \textbf{Windowed Negation Polarity Shield:} Any polarity inversion (e.g., insertion or deletion of negation tokens) immediately aborts speculative salvage with zero tolerance, guaranteeing $0$ false speculative commits.
+    \item \textbf{Dyspnea-Aware Endpointing:} Modulates silence timeout $\tau_{\text{vad}}$ dynamically:
+    \begin{equation}
+        \tau_{\text{vad}} = \text{clip}(\tau_{\text{base}} - \alpha \cdot \mathbb{I}_{\text{slot}} + \beta \cdot E_{\text{resp}}, \, 180\text{ ms}, \, 900\text{ ms})
+    \end{equation}
+    where $\mathbb{I}_{\text{slot}}$ indicates semantic closure (shortening silence to $180$\,ms on concise answers, saving $186$\,ms dead air), and $E_{\text{resp}}$ captures acoustic inspiratory gasp energy ($500$--$2{,}500$\,Hz), expanding pauses up to $900$\,ms during acute respiratory distress.
+\end{enumerate}
+
 \section{Experimental Methodology \& Benchmark Suite}
 \label{sec:methodology}
 
@@ -923,6 +947,35 @@ Peak GPU Resident VRAM & $3{,}180.0$\,MB & $\mathbf{3{,}075.0}$\,MB \\
 \end{figure}
 
 Without compression, expanding KV matrices saturated the 128-bit memory bus, causing throughput degradation. OmniSpec-Triage compressed intermediate dialogue by $70\%$, locking the active KV-cache to $45.0$\,MB ($-85.9\%$) and accelerating Turn 12 throughput by $1.10\times$. Crucially, Tier 1 clinical anchor pinning preserved $94.4\%$ of critical drug allergy needles (\texttt{penicillin}, \texttt{aspirin}, \texttt{latex}, \texttt{warfarin}) across all $12$ turns.
+
+\subsection{Continuous Speculative Shift \& Verification (CSSV) Benchmark Results}
+Table~\ref{tab:cssv_results} details the empirical performance of Adaptive CSSV and Dyspnea-Aware Endpointing across the 60 curated clinical vignettes ($43$ exact match turns, $7$ divergent context-shift turns, and $10$ adversarial polarity-flip turns).
+
+\begin{table}[!t]
+\centering
+\caption{Continuous Speculative Shift \& Verification (CSSV) \& Adaptive Endpointing Results}
+\label{tab:cssv_results}
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{@{}lrr@{}}
+\toprule
+\textbf{Metric Dimension} & \textbf{Legacy Binary Rollback} & \textbf{Adaptive CSSV (Phase 6)} \\
+\midrule
+Rollback Verification Latency & $889.0$\,ms & $\mathbf{35.0}$\,ms ($25.4\times$ Speedup) \\
+Prefix Salvage Ratio ($|Y_{\text{commit}}| / |Y_{\text{draft}}|$) & $0.0\%$ (Total Flush) & $\mathbf{62.5\%}$ ($23.6$ tokens/turn) \\
+Divergent Turn First-Audio TTFA & $1{,}356.4$\,ms & $\mathbf{451.1}$\,ms ($-66.7\%$) \\
+Median Glass-to-Glass (G2G) Latency & $2{,}012.2$\,ms & $\mathbf{1{,}370.0}$\,ms ($-31.9\%$) \\
+Polarity Inversion False Commits & $0$ (Target Standard) & $\mathbf{0}$ ($100\%$ Negation Shield) \\
+Concise Slot VAD Silence Cutoff & $450.0$\,ms & $\mathbf{264.0}$\,ms (Min $180$\,ms) \\
+Dyspneic Pause Protection & $450.0$\,ms (Cutoff risk) & $\mathbf{592.0}$\,ms (Max $749$\,ms) \\
+Peak Physical GPU Resident VRAM & $3{,}075.0$\,MB & $\mathbf{3{,}075.0}$\,MB ($\le 4{,}096$\,MB) \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+On divergent context-shift turns, Adaptive CSSV salvaged an average of $62.5\%$ ($23.6$ tokens) of drafted speech, dropping verification latency from $889.0$\,ms to $35.0$\,ms ($25.4\times$ speedup) and slashing divergent TTFA from $1{,}356.4$\,ms to $451.1$\,ms. Across all 60 cases, median Glass-to-Glass latency dropped to $1{,}370.0$\,ms. Crucially, on all $10$ polarity-flip cases, the Windowed Negation Shield triggered an immediate fail-safe abort with \textbf{zero false speculative commits}.
 
 \subsection{Adversarial Safety \& Malpractice Audits}
 Table~\ref{tab:safety_results} and Table~\ref{tab:adversarial_breakdown} summarize empirical performance across $100$ adversarial attacks and $20$ invariant gate trajectories.
