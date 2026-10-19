@@ -1,0 +1,61 @@
+case_id,category,ttft_ms,baseline_ttfa_ms,phase3_ttfa_ms,speedup,is_prewarmed,first_chunk_text,lead_margin_ms,underrun,num_chunks
+cardiac_01,cardiac,1350.1,1418.67,1350.17,1.05,True,Please tell me if you,1882.95,False,3
+cardiac_02,cardiac,1378.1,1446.68,1378.18,1.05,True,This sounds like a medical,2206.54,False,3
+cardiac_03,cardiac,644.12,2506.91,2438.41,1.03,True,That sounds quite severe,2522.89,False,2
+cardiac_04,cardiac,638.58,2101.22,2032.72,1.03,True,That sounds very serious,2578.4,False,2
+cardiac_05,cardiac,624.56,2274.82,2206.32,1.03,True,That sounds concerning,2535.42,False,2
+cardiac_06,cardiac,692.97,1286.78,1286.78,1.0,False,Did that fluttering happen,1356.16,False,2
+cardiac_07,cardiac,853.98,922.52,854.02,1.08,True,That sounds like muscle strain,2798.28,False,3
+cardiac_08,cardiac,987.5,1056.04,987.54,1.07,True,That sounds like it could,2768.76,False,3
+cardiac_09,cardiac,754.21,1615.2,1615.2,1.0,False,Okay,345.22,False,2
+cardiac_10,cardiac,699.81,2414.36,2345.86,1.03,True,That sounds very serious,2499.04,False,2
+cardiac_11,cardiac,770.65,839.19,770.69,1.09,True,That sounds like heartburn or,2800.76,False,3
+cardiac_12,cardiac,818.64,887.19,818.69,1.08,True,That sounds quite intense for,2785.98,False,3
+resp_01,respiratory,1311.89,1442.58,1442.58,1.0,False,Please state your location immediately,1962.19,False,3
+resp_02,respiratory,1041.45,1147.48,1147.48,1.0,False,You need to go immediately,1385.14,False,3
+resp_03,respiratory,838.86,907.41,838.91,1.08,True,That sounds like a serious,2796.66,False,3
+resp_04,respiratory,795.9,864.45,795.95,1.09,True,That sounds like it could,2797.2,False,3
+resp_05,respiratory,509.86,2960.96,2892.46,1.02,True,That sounds concerning,2305.74,False,2
+resp_06,respiratory,978.86,1096.14,1096.14,1.0,False,Based on your description of,1306.41,False,3
+resp_07,respiratory,936.16,1004.73,936.23,1.07,True,That sounds like a common,2772.38,False,3
+resp_08,respiratory,787.17,855.73,787.23,1.09,True,That sounds like a typical,2794.38,False,3
+resp_09,respiratory,1051.62,1120.18,1051.68,1.07,True,That sounds like you're dealing with congestion from a cold or sinus issue.,2776.36,False,3
+resp_10,respiratory,913.1,981.65,913.15,1.08,True,That sounds like it could,2775.48,False,3
+resp_11,respiratory,617.44,2183.79,2115.29,1.03,True,That sounds concerning,2474.96,False,2
+resp_12,respiratory,743.62,1636.95,1568.45,1.04,True,That sounds like orthopnea,2628.23,False,2
+neuro_01,neurological,659.03,727.58,659.08,1.1,True,This sounds like a stroke,2207.07,False,3
+neuro_02,neurological,693.23,1763.47,1694.97,1.04,True,That sounds very severe,2536.37,False,2
+neuro_03,neurological,968.74,1037.31,968.81,1.07,True,That sounds like a serious symptom that requires immediate attention.,2772.19,False,4
+neuro_04,neurological,505.63,2279.97,2211.47,1.03,True,That sounds very serious,2402.76,False,2
+neuro_05,neurological,713.33,2891.86,2823.36,1.02,True,That sounds like a dull,2271.52,False,2
+neuro_06,neurological,801.87,870.42,801.92,1.09,True,That sounds like a classic,2778.25,False,3
+neuro_07,neurological,986.74,1055.3,986.8,1.07,True,That sounds like a classic,2737.87,False,3
+neuro_08,neurological,925.85,994.41,925.91,1.07,True,That sounds like a common,2774.96,False,3
+neuro_09,neurological,687.42,756.0,687.5,1.1,True,That sounds much better than,2785.29,False,3
+neuro_10,neurological,1234.74,1485.15,1485.15,1.0,False,I need to know if you are also experiencing any trouble breathing or slurred speech along with these symptoms.,5307.05,False,3
+neuro_11,neurological,693.73,762.3,693.8,1.1,True,I hear that you have,2022.16,False,3
+neuro_12,neurological,1020.16,1088.73,1020.23,1.07,True,That sounds like a brief,2742.81,False,3
+trauma_01,trauma_bleeding,670.06,2264.36,2195.86,1.03,True,That sounds very serious,2460.22,False,2
+trauma_02,trauma_bleeding,669.8,2818.2,2749.7,1.02,True,That sounds very serious,2189.68,False,2
+trauma_03,trauma_bleeding,658.74,3226.07,3157.57,1.02,True,That sounds painful,2221.47,False,2
+trauma_04,trauma_bleeding,1262.72,1332.97,1332.97,1.0,False,You should go to Ward,1068.53,False,3
+trauma_05,trauma_bleeding,786.11,3290.89,3222.39,1.02,True,That sounds like a sprain,2256.14,False,2
+trauma_06,trauma_bleeding,1235.97,1304.57,1236.07,1.06,True,That sounds like a very minor injury that should be fine to care for at home.,2742.59,False,4
+trauma_07,trauma_bleeding,579.86,1768.23,1699.73,1.04,True,That sounds serious,2557.75,False,2
+trauma_08,trauma_bleeding,482.8,2712.33,2643.83,1.03,True,That sounds quite painful,2263.31,False,2
+trauma_09,trauma_bleeding,890.98,984.79,984.79,1.0,False,That is good to hear,994.96,False,3
+trauma_10,trauma_bleeding,888.66,957.23,888.73,1.08,True,That sounds like a minor,2721.82,False,3
+trauma_11,trauma_bleeding,683.5,2352.13,2352.13,1.0,False,Given the high,511.47,False,2
+trauma_12,trauma_bleeding,931.97,1000.52,932.02,1.07,True,That sounds like a minor,2739.39,False,3
+gen_01,allergic,911.11,1002.14,1002.14,1.0,False,You need to go straight,1071.46,False,3
+gen_02,general_intake,1287.63,1422.68,1422.68,1.0,False,Your symptoms sound serious enough,1896.66,False,3
+gen_03,general_intake,678.72,2204.47,2135.97,1.03,True,That sounds very painful,2460.83,False,2
+gen_04,general_intake,696.14,2065.42,1996.92,1.03,True,That sounds uncomfortable,2548.19,False,2
+gen_05,general_intake,805.72,3993.51,3925.01,1.02,True,That sounds painful,2173.54,False,2
+gen_06,general_intake,766.87,852.72,852.72,1.0,False,You should head to Ward,1183.3,False,3
+gen_07,general_intake,1137.69,1206.25,1137.75,1.06,True,That sounds like a mild stomach issue that is responding well to treatment.,2715.61,False,4
+gen_08,general_intake,981.81,1050.37,981.87,1.07,True,That sounds like it could,2755.62,False,3
+gen_09,allergic,1109.63,1178.2,1109.7,1.06,True,That sounds like it could be a mild irritation from the spicy food rather than an allergic reaction.,2775.09,False,4
+gen_10,neurological,657.89,2400.52,2332.02,1.03,True,That sounds very serious,2364.37,False,2
+gen_11,general_intake,804.79,916.01,916.01,1.0,False,It sounds like you are,1187.9,False,3
+gen_12,general_intake,867.2,935.76,867.26,1.08,True,That sounds like a minor,2719.42,False,3

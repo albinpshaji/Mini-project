@@ -13,6 +13,7 @@ import os
 import sys
 import time
 import json
+import sqlite3
 import argparse
 import datetime
 from typing import Dict, Any, List
@@ -20,6 +21,48 @@ from typing import Dict, Any, List
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 from src.speculative.divergence_detector import compute_divergence, DivergenceResult
+
+
+def record_invariant_db(summary: dict, db_path: str = "eval/results/history.db"):
+    """Persists invariant gate run metrics to SQLite."""
+    try:
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        conn = sqlite3.connect(db_path)
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS invariant_gate_runs (
+                run_id TEXT PRIMARY KEY,
+                timestamp TEXT,
+                branch TEXT,
+                total_cases INTEGER,
+                accuracy REAL,
+                polarity_intercept_rate REAL,
+                critical_entity_intercept_rate REAL,
+                safe_commit_rate REAL,
+                false_commits INTEGER,
+                mean_latency_us REAL,
+                summary_json_path TEXT
+            )
+        """)
+        cur.execute("""
+            INSERT OR REPLACE INTO invariant_gate_runs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            summary.get("run_id", f"inv_{int(time.time())}"),
+            summary["timestamp"],
+            summary["branch"],
+            summary["total_cases"],
+            summary["accuracy"],
+            summary["polarity_intercept_rate"],
+            summary["critical_entity_intercept_rate"],
+            summary["safe_commit_rate"],
+            summary["false_commits"],
+            summary["mean_latency_us"],
+            summary.get("summary_json_path", "")
+        ))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"⚠️ SQLite history.db notice: {e}")
 
 
 INVARIANT_TEST_CASES = [
@@ -319,8 +362,13 @@ if __name__ == "__main__":
 
     summary_data = run_evaluation(branch_tag=args.branch)
 
-    if args.save:
-        os.makedirs(os.path.dirname(args.save), exist_ok=True)
-        with open(args.save, "w", encoding="utf-8") as f:
-            json.dump(summary_data, f, indent=2)
-        print(f"Saved evaluation results to {args.save}")
+    clean_branch = args.branch.replace("/", "_").replace("-", "_")
+    out_dir = "eval/results/runs"
+    os.makedirs(out_dir, exist_ok=True)
+    out_file = args.save if args.save else os.path.join(out_dir, f"{clean_branch}_invariant_gate_summary.json")
+    with open(out_file, "w", encoding="utf-8") as f:
+        json.dump(summary_data, f, indent=2)
+    print(f"Saved evaluation results to {out_file}")
+
+    summary_data["summary_json_path"] = out_file
+    record_invariant_db(summary_data)

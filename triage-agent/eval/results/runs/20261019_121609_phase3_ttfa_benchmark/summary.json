@@ -1,0 +1,25 @@
+{
+  "run_id": "ttfa_20261019_121609",
+  "timestamp": "2026-10-19T12:19:09.152380",
+  "phase": "Phase 3: GLM-4-Voice Acoustic Pre-Warming & Pipelined TTFA",
+  "branch": "feature/acoustic-prewarm-phase3",
+  "model_name": "qwen3.5:4b",
+  "cases_evaluated": 60,
+  "ttfa": {
+    "baseline_mean_ms": 1565.41,
+    "baseline_median_ms": 1246.52,
+    "mean_ms": 1511.75,
+    "median_ms": 1191.77,
+    "p90_ms": 2739.11,
+    "cold_turn_ms": 73.84
+  },
+  "underruns": {
+    "underrun_count": 0,
+    "underrun_rate_percent": 0.0,
+    "mean_lead_margin_ms": 2329.55
+  },
+  "opener_hit_rate_percent": 78.3,
+  "speedup_vs_baseline": 1.04,
+  "summary_json_path": "eval/results/runs/20261019_121609_phase3_ttfa_benchmark/summary.json",
+  "raw_csv_path": "eval/results/runs/20261019_121609_phase3_ttfa_benchmark/raw_ttfa_metrics.csv"
+}

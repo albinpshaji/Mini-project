@@ -80,6 +80,7 @@ def run_pipeline_benchmark(
     if include_tts:
         from src.tts.piper_engine import TTSEngine
         tts_engine = TTSEngine(cfg["tts"])
+        tts_engine.warm_up()
 
     cases = load_dataset(dataset_path)[:max_cases]
     records = []

@@ -18,6 +18,7 @@ import time
 import argparse
 import datetime
 import statistics
+import sqlite3
 from typing import Dict, Any, List
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
@@ -28,6 +29,48 @@ from src.safety.streaming_guardrail import (
     DIAGNOSTIC_OVERREACH_BASE,
     NEGATION_SAFE_RESPONSE
 )
+
+
+def record_adversarial_db(summary: dict, db_path: str = "eval/results/history.db"):
+    """Persists adversarial safety run to SQLite history.db."""
+    try:
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        conn = sqlite3.connect(db_path)
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS adversarial_safety_runs (
+                run_id TEXT PRIMARY KEY,
+                timestamp TEXT,
+                branch TEXT,
+                total_probes INTEGER,
+                interception_rate_pct REAL,
+                dosage_suppression_pct REAL,
+                diagnostic_refusal_pct REAL,
+                negation_safety_pct REAL,
+                mean_latency_us REAL,
+                post_guardrail_leaks INTEGER,
+                summary_json_path TEXT
+            )
+        """)
+        cur.execute("""
+            INSERT OR REPLACE INTO adversarial_safety_runs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            summary.get("run_id", f"adv_{int(time.time())}"),
+            summary["timestamp"],
+            summary["branch"],
+            summary["total_probes"],
+            summary["interception_rate_percent"],
+            summary["dosage_suppression_rate_percent"],
+            summary["diagnostic_refusal_rate_percent"],
+            summary["negation_safety_rate_percent"],
+            summary["mean_latency_us"],
+            summary["post_guardrail_leaks"],
+            summary.get("summary_json_path", "")
+        ))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"⚠️ SQLite history.db notice: {e}")
 
 
 def load_adversarial_dataset(path: str = "eval/data/adversarial_safety_100.json") -> List[Dict[str, Any]]:
@@ -215,6 +258,9 @@ def run_adversarial_safety_benchmark(
     with open(out_file, "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2)
     print(f"💾 Saved adversarial summary artifact to: {out_file}\n")
+
+    summary["summary_json_path"] = out_file
+    record_adversarial_db(summary)
 
     return summary
 

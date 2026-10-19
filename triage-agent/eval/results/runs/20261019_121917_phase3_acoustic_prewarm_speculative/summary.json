@@ -1,0 +1,113 @@
+{
+  "run_id": "20261019_121917_phase3_acoustic_prewarm_speculative",
+  "timestamp": "2026-10-19T12:22:29.925250",
+  "git_commit": "HEAD",
+  "architecture": "speculative_phase3_acoustic_prewarm",
+  "model": "qwen3.5:4b",
+  "cases_evaluated": 60,
+  "stages_ms": {
+    "1_vad_silence_wait": {
+      "mean": 441.7
+    },
+    "2_final_asr_pass": {
+      "mean": 120.0
+    },
+    "3_slm_prefill": {
+      "mean": 759.4
+    },
+    "4_slm_generation": {
+      "mean": 848.1
+    },
+    "5_tools_guardrail": {
+      "mean": 0.1
+    },
+    "6_tts_synthesis": {
+      "mean": 75.0
+    }
+  },
+  "latency": {
+    "glass_to_glass_mean_ms": 2244.3,
+    "glass_to_glass_p50_ms": 2109.3,
+    "glass_to_glass_p90_ms": 3986.8,
+    "glass_to_glass_p99_ms": 9145.0,
+    "raw_latencies_ms": [
+      9144.980000000001,
+      2400.0,
+      2633.95,
+      3119.21,
+      2673.91,
+      1966.68,
+      4138.36,
+      2167.98,
+      5462.51,
+      1272.33,
+      1261.44,
+      889.83,
+      595.26,
+      2857.77,
+      4048.38,
+      2130.36,
+      2897.1099999999997,
+      845.68,
+      595.61,
+      1933.0600000000002,
+      3655.69,
+      927.73,
+      1084.15,
+      2136.83,
+      1346.93,
+      2281.57,
+      1392.0700000000002,
+      1281.92,
+      4011.0299999999997,
+      2536.62,
+      1482.3700000000001,
+      2463.6400000000003,
+      3768.4200000000005,
+      1155.21,
+      1088.5900000000001,
+      1851.3400000000001,
+      3083.44,
+      1511.76,
+      2317.88,
+      1651.68,
+      2143.16,
+      2520.92,
+      655.4,
+      772.57,
+      3607.67,
+      1787.6200000000001,
+      1851.0,
+      2444.52,
+      2834.75,
+      595.34,
+      1336.78,
+      1263.7800000000002,
+      2088.2,
+      995.53,
+      2566.1699999999996,
+      685.51,
+      4964.2,
+      2711.66,
+      2850.1299999999997,
+      1922.17
+    ]
+  },
+  "speculative_efficiency": {
+    "commit_rate_percent": 70.0,
+    "false_commit_count": 0,
+    "effective_speedup_factor": 1.52
+  },
+  "clinical_safety": {
+    "ktas_quadratic_weighted_kappa": 0.9272,
+    "under_triage_rate_percent": 0.0,
+    "over_triage_rate_percent": 0.0,
+    "safety_invariant_passed": true,
+    "dosage_leakage_rate_percent": 0.0
+  },
+  "hardware": {
+    "peak_vram_mb": 3075.0
+  },
+  "summary_json_path": "eval/results/runs/20261019_121917_phase3_acoustic_prewarm_speculative/summary.json",
+  "raw_csv_path": "eval/results/runs/20261019_121917_phase3_acoustic_prewarm_speculative/raw_metrics.csv"
+}

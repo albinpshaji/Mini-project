@@ -1,0 +1,6 @@
+case_id,category,ttft_ms,baseline_ttfa_ms,phase3_ttfa_ms,speedup,is_prewarmed,first_chunk_text,lead_margin_ms,underrun,num_chunks
+cardiac_01,cardiac,7317.38,7390.84,7390.89,1.0,False,Please tell me if this,1365.06,False,3
+cardiac_02,cardiac,889.75,987.82,987.89,1.0,False,This sounds like a medical,1235.55,False,3
+cardiac_03,cardiac,650.05,700.23,1877.2,0.37,False,That sounds quite severe,1303.42,False,2
+cardiac_04,cardiac,643.59,700.85,1704.93,0.41,False,That sounds very serious,1683.4,False,2
+cardiac_05,cardiac,865.42,936.75,936.81,1.0,False,I hear that sharp chest,1560.02,False,3

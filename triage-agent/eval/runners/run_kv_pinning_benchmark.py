@@ -10,6 +10,7 @@ import os
 import sys
 import time
 import json
+import sqlite3
 import statistics
 import datetime
 import ollama
@@ -20,6 +21,46 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 from src.slm.slm_engine import SLMEngine
 from src.slm.prompt_templates import SYSTEM_PROMPT
 from src.speculative.speculator import Speculator
+
+
+def record_kv_pinning_db(summary: dict, db_path: str = "eval/results/history.db"):
+    """Persists KV pinning run metrics to SQLite history.db."""
+    try:
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
+        conn = sqlite3.connect(db_path)
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS kv_pinning_benchmark_runs (
+                run_id TEXT PRIMARY KEY,
+                timestamp TEXT,
+                branch TEXT,
+                model_name TEXT,
+                pinned_prefix_tokens INTEGER,
+                mean_baseline_wall_ms REAL,
+                mean_pinned_wall_ms REAL,
+                mean_speedup REAL,
+                speculative_restart_speedup REAL,
+                summary_json_path TEXT
+            )
+        """)
+        cur.execute("""
+            INSERT OR REPLACE INTO kv_pinning_benchmark_runs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            summary.get("run_id", f"kv_{int(time.time())}"),
+            summary["timestamp"],
+            summary["branch"],
+            summary["model_name"],
+            summary["pinned_prefix_tokens"],
+            summary["mean_baseline_wall_ms"],
+            summary["mean_pinned_wall_ms"],
+            summary["mean_speedup"],
+            summary["speculative_restart_speedup"],
+            summary.get("summary_json_path", "")
+        ))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"⚠️ SQLite history.db notice: {e}")
 
 
 TEST_SCENARIOS = [
@@ -212,6 +253,9 @@ def run_benchmark(model_name: str = "qwen3.5:4b", output_dir: str = "eval/result
     with open(summary_path, "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2)
     print(f"Summary JSON saved to: {summary_path}")
+
+    summary["summary_json_path"] = summary_path
+    record_kv_pinning_db(summary)
 
     return summary
 

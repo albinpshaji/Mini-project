@@ -23,6 +23,7 @@ import socket
 import logging
 import asyncio
 import threading
+import queue
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 
@@ -45,6 +46,7 @@ from src.audio.acoustic_biomarkers import AcousticBiomarkerCoProcessor, Acoustic
 from src.scheduler.async_scheduler import ResourceScheduler
 from src.speculative.speculator import Speculator
 from src.speculative.divergence_detector import compute_divergence
+from src.tts.piper_engine import AcousticPrewarmer, PrewarmedAudioChunk
 from faster_whisper import WhisperModel
 from piper import PiperVoice
 
@@ -104,6 +106,8 @@ piper_voice: Optional[PiperVoice] = None
 biomarker_coprocessor: Optional[AcousticBiomarkerCoProcessor] = None
 resource_scheduler: Optional[ResourceScheduler] = None
 streaming_guardrail: Optional[Any] = None
+acoustic_prewarmer: Optional[AcousticPrewarmer] = None
+EMPATHETIC_AUDIO_CACHE: Dict[str, PrewarmedAudioChunk] = {}
 
 # Audio cache for generated TTS audio
 audio_cache: Dict[str, bytes] = {}
@@ -146,7 +150,7 @@ def get_lan_ip() -> str:
 
 def initialize_engines():
     """Initializes models upon startup."""
-    global slm_engine, whisper_model, whisper_partial, speculator, piper_voice, biomarker_coprocessor, resource_scheduler, streaming_guardrail
+    global slm_engine, whisper_model, whisper_partial, speculator, piper_voice, biomarker_coprocessor, resource_scheduler, streaming_guardrail, acoustic_prewarmer, EMPATHETIC_AUDIO_CACHE
     
     log.info("Initializing OmniSpec-Triage AI Engines...")
     
@@ -179,6 +183,16 @@ def initialize_engines():
         voice_path = Path(tts_cfg.get("voice_model"))
     log.info(f"Loading Piper voice from {voice_path}...")
     piper_voice = PiperVoice.load(str(voice_path))
+    
+    # Phase 3: GLM-4-Voice Acoustic Pre-Warming & In-Memory Audio Cache
+    log.info("Pre-warming Piper ONNX graph and building empathetic acknowledgment audio cache (Phase 3)...")
+    try:
+        acoustic_prewarmer = AcousticPrewarmer(piper_voice)
+        warmup_ms = acoustic_prewarmer.warm_up_engine()
+        EMPATHETIC_AUDIO_CACHE = acoustic_prewarmer.build_cache()
+        log.info(f"Piper ONNX warm-up completed in {warmup_ms:.2f} ms ({len(EMPATHETIC_AUDIO_CACHE)} openers cached in RAM)")
+    except Exception as e:
+        log.warning(f"Could not initialize acoustic prewarmer: {e}")
     
     # 5. SLM Reasoning Engine (Ollama) & Speculator
     slm_cfg = cfg.get("slm", {})
@@ -303,9 +317,10 @@ SUB_CLAUSE_REGEX = re.compile(
 def synthesize_chunk_audio_wav(text: str) -> tuple[bytes, float, np.ndarray]:
     """
     Synthesizes a sub-clause chunk using Piper.
+    Checks AcousticPrewarmer RAM cache first for 0ms synthesis.
     Returns (wav_bytes, duration_seconds, int16_array).
     """
-    global piper_voice, streaming_guardrail
+    global piper_voice, streaming_guardrail, acoustic_prewarmer
     if piper_voice is None or not text.strip():
         return b"", 0.0, np.array([], dtype=np.int16)
         
@@ -316,6 +331,12 @@ def synthesize_chunk_audio_wav(text: str) -> tuple[bytes, float, np.ndarray]:
     clean_text = text.replace("**", "").replace("*", "").replace("#", "").strip()
     if not clean_text:
         return b"", 0.0, np.array([], dtype=np.int16)
+
+    # Phase 3 Fast-Path: Check AcousticPrewarmer RAM cache first
+    if acoustic_prewarmer is not None:
+        cached = acoustic_prewarmer.get_prewarmed_chunk(clean_text)
+        if cached is not None:
+            return cached.wav_bytes, cached.duration_s, cached.pcm_int16
         
     chunks = []
     for chunk in piper_voice.synthesize(clean_text):
@@ -619,52 +640,125 @@ def stream_chat_generator(user_text: str):
     chunk_index = 0
     all_int16_chunks = []
 
-    for chunk in token_stream:
-        tok = chunk.get("token", "")
-        if not tok:
-            continue
+    # Phase 3: Pipelined Asynchronous Synthesizer Queue (Producer-Consumer)
+    synth_input_queue = queue.Queue()
+    synth_output_queue = queue.Queue()
+    first_chunk_emitted = False
 
-        buffer += tok
-        full_response_parts.append(tok)
+    def _pipelined_synth_worker():
+        while True:
+            item = synth_input_queue.get()
+            if item is None:
+                break
+            c_idx, c_text = item
+            try:
+                wav_b, dur_s, arr16 = synthesize_chunk_audio_wav(c_text)
+                synth_output_queue.put((c_idx, wav_b, dur_s, arr16, c_text))
+            except Exception as ex:
+                log.warning(f"Audio chunk synthesis notice: {ex}")
+                synth_output_queue.put((c_idx, b"", 0.0, np.array([], dtype=np.int16), c_text))
+            finally:
+                synth_input_queue.task_done()
 
-        # Stream token text to client immediately for live typewriter rendering
-        yield f"data: {json.dumps({'type': 'token', 'token': tok})}\n\n"
+    synth_thread = threading.Thread(target=_pipelined_synth_worker, daemon=True)
+    synth_thread.start()
 
-        # Check sub-clause boundary (>= 3 words and punctuation/conjunction, or >= 6 words, or sentence end)
-        words = buffer.split()
-        has_sentence_end = any(p in buffer for p in [". ", "? ", "! ", ".\n", "?\n", "!\n"])
-        has_sub_clause = (len(words) >= 3 and SUB_CLAUSE_REGEX.search(buffer)) or len(words) >= 6
+    try:
+        for chunk in token_stream:
+            tok = chunk.get("token", "")
+            if not tok:
+                continue
 
-        if has_sentence_end or has_sub_clause:
-            clause_text = None
-            parts = SUB_CLAUSE_REGEX.split(buffer, maxsplit=1)
-            if len(parts) > 1 and parts[0].strip():
-                clause_text = parts[0].strip()
-                buffer = "".join(parts[1:])
-            elif len(words) >= 6:
-                clause_text = " ".join(words[:5])
-                buffer = " ".join(words[5:])
+            buffer += tok
+            full_response_parts.append(tok)
 
-            if clause_text:
-                # Synthesize sub-clause audio chunk on the fly
-                wav_bytes, dur, int16_arr = synthesize_chunk_audio_wav(clause_text)
+            # Stream token text to client immediately for unblocked live typewriter rendering
+            yield f"data: {json.dumps({'type': 'token', 'token': tok})}\n\n"
+
+            # Drain any ready audio chunks from the background synthesizer
+            while not synth_output_queue.empty():
+                try:
+                    c_idx, wav_bytes, dur, int16_arr, c_text = synth_output_queue.get_nowait()
+                    if wav_bytes:
+                        if len(int16_arr) > 0:
+                            all_int16_chunks.append(int16_arr)
+                        audio_b64 = f"data:audio/wav;base64,{base64.b64encode(wav_bytes).decode('utf-8')}"
+                        yield f"data: {json.dumps({'type': 'audio_chunk', 'chunk_index': c_idx, 'audio_base64': audio_b64, 'duration': dur, 'text': c_text})}\n\n"
+                except queue.Empty:
+                    break
+
+            # Check sub-clause boundary (>= 3 words and punctuation/conjunction, or >= 6 words, or sentence end)
+            words = buffer.split()
+            has_sentence_end = any(p in buffer for p in [". ", "? ", "! ", ".\n", "?\n", "!\n"])
+            has_sub_clause = (len(words) >= 3 and SUB_CLAUSE_REGEX.search(buffer)) or len(words) >= 6
+
+            if has_sentence_end or has_sub_clause:
+                clause_text = None
+                parts = SUB_CLAUSE_REGEX.split(buffer, maxsplit=1)
+                if len(parts) > 1 and parts[0].strip():
+                    clause_text = parts[0].strip()
+                    buffer = "".join(parts[1:])
+                elif len(words) >= 6:
+                    clause_text = " ".join(words[:5])
+                    buffer = " ".join(words[5:])
+
+                if clause_text:
+                    # Fast-Path Opener Check for Chunk 0: GLM-4-Voice Pre-Warming (<30ms TTFA)
+                    if not first_chunk_emitted and acoustic_prewarmer:
+                        prewarmed = acoustic_prewarmer.match_opener(clause_text)
+                        if prewarmed:
+                            first_chunk_emitted = True
+                            if len(prewarmed.pcm_int16) > 0:
+                                all_int16_chunks.append(prewarmed.pcm_int16)
+                            audio_b64 = f"data:audio/wav;base64,{base64.b64encode(prewarmed.wav_bytes).decode('utf-8')}"
+                            yield f"data: {json.dumps({'type': 'audio_chunk', 'chunk_index': 0, 'audio_base64': audio_b64, 'duration': prewarmed.duration_s, 'text': clause_text, 'prewarmed': True})}\n\n"
+                            chunk_index += 1
+                            continue
+
+                    first_chunk_emitted = True
+                    synth_input_queue.put((chunk_index, clause_text))
+                    chunk_index += 1
+
+        # Remaining buffer audio
+        if buffer.strip():
+            clause_text = buffer.strip()
+            if not first_chunk_emitted and acoustic_prewarmer:
+                prewarmed = acoustic_prewarmer.match_opener(clause_text)
+                if prewarmed:
+                    first_chunk_emitted = True
+                    if len(prewarmed.pcm_int16) > 0:
+                        all_int16_chunks.append(prewarmed.pcm_int16)
+                    audio_b64 = f"data:audio/wav;base64,{base64.b64encode(prewarmed.wav_bytes).decode('utf-8')}"
+                    yield f"data: {json.dumps({'type': 'audio_chunk', 'chunk_index': 0, 'audio_base64': audio_b64, 'duration': prewarmed.duration_s, 'text': clause_text, 'prewarmed': True})}\n\n"
+                    chunk_index += 1
+                else:
+                    first_chunk_emitted = True
+                    synth_input_queue.put((chunk_index, clause_text))
+                    chunk_index += 1
+            else:
+                synth_input_queue.put((chunk_index, clause_text))
+                chunk_index += 1
+
+        # Signal completion to synthesis worker
+        synth_input_queue.put(None)
+
+        # Drain all remaining synthesized audio chunks
+        while synth_thread.is_alive() or not synth_output_queue.empty():
+            try:
+                c_idx, wav_bytes, dur, int16_arr, c_text = synth_output_queue.get(timeout=0.05)
                 if wav_bytes:
                     if len(int16_arr) > 0:
                         all_int16_chunks.append(int16_arr)
                     audio_b64 = f"data:audio/wav;base64,{base64.b64encode(wav_bytes).decode('utf-8')}"
-                    yield f"data: {json.dumps({'type': 'audio_chunk', 'chunk_index': chunk_index, 'audio_base64': audio_b64, 'duration': dur, 'text': clause_text})}\n\n"
-                    chunk_index += 1
+                    yield f"data: {json.dumps({'type': 'audio_chunk', 'chunk_index': c_idx, 'audio_base64': audio_b64, 'duration': dur, 'text': c_text})}\n\n"
+            except queue.Empty:
+                if not synth_thread.is_alive():
+                    break
 
-    # Remaining buffer audio
-    if buffer.strip():
-        clause_text = buffer.strip()
-        wav_bytes, dur, int16_arr = synthesize_chunk_audio_wav(clause_text)
-        if wav_bytes:
-            if len(int16_arr) > 0:
-                all_int16_chunks.append(int16_arr)
-            audio_b64 = f"data:audio/wav;base64,{base64.b64encode(wav_bytes).decode('utf-8')}"
-            yield f"data: {json.dumps({'type': 'audio_chunk', 'chunk_index': chunk_index, 'audio_base64': audio_b64, 'duration': dur, 'text': clause_text})}\n\n"
-            chunk_index += 1
+        synth_thread.join(timeout=2.0)
+    finally:
+        if synth_thread.is_alive():
+            synth_input_queue.put(None)
 
     assembled_response = "".join(full_response_parts).strip()
     if contains_fabricated_placeholder(assembled_response):
