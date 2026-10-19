@@ -64,6 +64,18 @@ class SLMEngine:
             bild_entropy_threshold=config.get("bild_entropy_threshold", 0.15),
         )
 
+        # Phase 5: SnapKV Attention Anchor Pruning & Cache Compression (Li et al., NeurIPS 2024 / DuoAttention, ICLR 2025)
+        self.use_snapkv = config.get("use_snapkv", True)
+        self.snapkv_compressor = None
+        self._last_snapkv_telemetry = {}
+        if self.use_snapkv:
+            from .snapkv_engine import SnapKVCompressor
+            self.snapkv_compressor = SnapKVCompressor(
+                observation_window_tokens=config.get("snapkv_observation_window", 48),
+                max_compressed_history_tokens=config.get("snapkv_max_tokens", 512),
+                trigger_turn_threshold=config.get("snapkv_trigger_turn_threshold", 4),
+            )
+
     def _calculate_prefix_tokens(self, text: str) -> int:
         """
         Calculates exact token length of static prefix for KV-cache pinning.
@@ -126,7 +138,18 @@ class SLMEngine:
         if history and history[-1].get("text") == transcript:
             history = history[:-1]
 
-        # Sliding window: keep up to max_history_messages (default 24 = 12 complete conversation rounds)
+        # Phase 5: SnapKV Attention Anchor Pruning & Multi-Turn Compression
+        if (
+            self.use_snapkv
+            and self.snapkv_compressor is not None
+            and len(history) > self.snapkv_compressor.trigger_turn_threshold
+        ):
+            history, snapkv_telemetry = self.snapkv_compressor.compress_history(history)
+            self._last_snapkv_telemetry = snapkv_telemetry
+        else:
+            self._last_snapkv_telemetry = {}
+
+        # Sliding window: keep up to max_history_messages
         recent_history = history[-self.max_history_messages:]
         for turn in recent_history:
             role = "user" if turn["role"] == "user" else "assistant"
@@ -190,6 +213,15 @@ class SLMEngine:
         """Returns Phase 4 Lookahead Jacobi Speculation telemetry metrics."""
         if self.lookahead_speculator is not None:
             return self.lookahead_speculator.get_telemetry()
+        return {}
+
+    def get_snapkv_telemetry(self) -> dict:
+        """Returns Phase 5 SnapKV Attention Anchor Pruning telemetry metrics."""
+        if self.snapkv_compressor is not None:
+            data = self.snapkv_compressor.get_telemetry()
+            if self._last_snapkv_telemetry:
+                data.update({"last_turn_compression": dict(self._last_snapkv_telemetry)})
+            return data
         return {}
 
     def generate(self, transcript: str, conversation_history=None, grammar=None, routing_hint: str = None) -> str:

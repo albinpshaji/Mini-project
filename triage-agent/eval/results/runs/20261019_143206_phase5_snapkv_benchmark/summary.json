@@ -1,0 +1,22 @@
+{
+  "run_id": "multiturn_snapkv_20261019_143206",
+  "timestamp": "20261019_143206",
+  "branch": "feature/snapkv-pruning-phase5",
+  "model_name": "qwen3.5:4b",
+  "num_consultations": 3,
+  "turns_per_consultation": 12,
+  "uncompressed_turn1_tok_s": 14.13,
+  "uncompressed_turn12_tok_s": 16.53,
+  "compressed_turn1_tok_s": 22.06,
+  "compressed_turn12_tok_s": 18.2,
+  "uncompressed_throughput_preservation": 1.17,
+  "compressed_throughput_preservation": 0.825,
+  "relative_turn12_acceleration": 1.1,
+  "mean_tokens_pruned": 580.7,
+  "mean_compression_ratio": 0.305,
+  "peak_kv_footprint_mb": 45.0,
+  "needle_retention_accuracy": 94.4,
+  "peak_vram_mb": 3075.0,
+  "summary_json_path": "eval/results/runs/20261019_143206_phase5_snapkv_benchmark/summary.json",
+  "raw_csv_path": "eval/results/runs/20261019_143206_phase5_snapkv_benchmark/raw_metrics.csv"
+}

@@ -41,6 +41,10 @@ class Speculator:
         """Expose Phase 4 Lookahead Jacobi Speculation telemetry."""
         return self.engine.get_lookahead_telemetry()
 
+    def get_snapkv_telemetry(self) -> dict:
+        """Expose Phase 5 SnapKV Attention Anchor Pruning telemetry."""
+        return self.engine.get_snapkv_telemetry()
+
     def start_speculation(self, partial_text: str, conversation_history: list):
         self.cancel()
 

@@ -1,0 +1,37 @@
+patient_id,category,turn,user_utterance,uncompressed_tok_s,uncompressed_latency_ms,uncompressed_tokens,compressed_tok_s,compressed_latency_ms,compressed_tokens,speedup_factor,tokens_pruned,compression_ratio,active_kv_footprint_mb,vram_mb
+patient_01_cardiac,Cardiac Emergency & Anticoagulation,1,I have severe crushing substernal chest pressure radiating t...,4.56,8779.4,40,23.39,1795.4,42,5.13,0,1.0,45.0,3051.0
+patient_01_cardiac,Cardiac Emergency & Anticoagulation,2,"The pressure feels like an elephant sitting on my chest, nur...",16.61,1926.6,32,20.38,2944.3,60,1.23,0,1.0,45.0,3075.0
+patient_01_cardiac,Cardiac Emergency & Anticoagulation,3,"Yes, I feel somewhat nauseous and dizzy when I try to stand....",16.56,1992.6,33,17.51,2684.2,47,1.06,0,1.0,45.0,3075.0
+patient_01_cardiac,Cardiac Emergency & Anticoagulation,4,"No, I have never had a heart attack before in my life....",15.36,2147.9,33,20.3,2807.6,57,1.32,68,0.76,26.88,3075.0
+patient_01_cardiac,Cardiac Emergency & Anticoagulation,5,"I took one nitroglycerin tablet about 20 minutes ago, but th...",18.72,2457.4,46,19.52,2304.8,45,1.04,131,0.647,30.0,3075.0
+patient_01_cardiac,Cardiac Emergency & Anticoagulation,6,My wife drove me here to the emergency department entrance....,16.69,2097.2,35,17.31,1618.0,28,1.04,219,0.518,29.38,3075.0
+patient_01_cardiac,Cardiac Emergency & Anticoagulation,7,I am currently sitting in the registration waiting room area...,17.43,2237.3,39,19.15,1984.6,38,1.1,271,0.461,29.0,3075.0
+patient_01_cardiac,Cardiac Emergency & Anticoagulation,8,"Yes, I have high blood pressure and I take Lisinopril every ...",14.16,1835.9,26,20.69,2706.5,56,1.46,319,0.439,31.25,3075.0
+patient_01_cardiac,Cardiac Emergency & Anticoagulation,9,The pain is now radiating slightly into my left lower jaw as...,16.47,2307.0,38,18.37,1687.7,31,1.12,385,0.411,33.62,3075.0
+patient_01_cardiac,Cardiac Emergency & Anticoagulation,10,Can you tell me how long the wait is for cardiology or resus...,13.81,2027.7,28,15.01,1732.0,26,1.09,448,0.367,32.5,3075.0
+patient_01_cardiac,Cardiac Emergency & Anticoagulation,11,I also feel a bit sweaty and cold on my forehead right now....,15.54,2574.4,40,18.94,2903.9,55,1.22,502,0.341,32.5,3075.0
+patient_01_cardiac,Cardiac Emergency & Anticoagulation,12,"What should the medical team know about my allergies, medica...",16.99,3472.1,59,18.41,2607.8,48,1.08,554,0.348,37.0,3075.0
+patient_02_respiratory,Acute Asthma Exacerbation & Drug Sensitivity,1,I am having severe shortness of breath and loud wheezing tha...,18.6,1881.3,35,22.03,2269.9,50,1.18,0,1.0,45.0,3075.0
+patient_02_respiratory,Acute Asthma Exacerbation & Drug Sensitivity,2,I had to use my rescue inhaler four times in the past hour w...,18.39,1523.0,28,18.56,1886.2,35,1.01,0,1.0,45.0,3075.0
+patient_02_respiratory,Acute Asthma Exacerbation & Drug Sensitivity,3,My chest feels completely tight and I can barely speak in fu...,19.25,2649.0,51,18.08,2544.8,46,0.94,0,1.0,45.0,3075.0
+patient_02_respiratory,Acute Asthma Exacerbation & Drug Sensitivity,4,"Yes, my pulse oximeter at home showed my oxygen saturation w...",18.98,3003.7,57,17.9,2513.5,45,0.94,78,0.685,21.25,3075.0
+patient_02_respiratory,Acute Asthma Exacerbation & Drug Sensitivity,5,"I have had asthma since childhood, but this attack feels muc...",17.7,2825.1,50,15.48,1679.8,26,0.87,127,0.609,24.75,3075.0
+patient_02_respiratory,Acute Asthma Exacerbation & Drug Sensitivity,6,"No fever, but I had a mild runny nose yesterday morning....",18.38,3645.8,67,19.67,2948.8,58,1.07,203,0.463,21.88,3075.0
+patient_02_respiratory,Acute Asthma Exacerbation & Drug Sensitivity,7,I am leaning forward on the counter to try to catch my breat...,17.09,2633.3,45,18.66,2090.4,39,1.09,255,0.459,27.0,3075.0
+patient_02_respiratory,Acute Asthma Exacerbation & Drug Sensitivity,8,My daughter is here with me at the triage desk....,16.91,3370.5,57,16.65,1922.5,32,0.98,326,0.396,26.75,3075.0
+patient_02_respiratory,Acute Asthma Exacerbation & Drug Sensitivity,9,My heart feels like it is racing very fast in my chest....,16.35,3057.5,50,17.41,2528.0,44,1.06,395,0.339,25.38,3075.0
+patient_02_respiratory,Acute Asthma Exacerbation & Drug Sensitivity,10,Is there a nebulizer treatment room ready right now?...,17.48,3890.7,68,18.33,2291.7,42,1.05,453,0.339,29.0,3075.0
+patient_02_respiratory,Acute Asthma Exacerbation & Drug Sensitivity,11,My lips feel slightly dry and tingling....,16.36,3117.5,51,19.56,2453.4,48,1.2,524,0.309,29.25,3075.0
+patient_02_respiratory,Acute Asthma Exacerbation & Drug Sensitivity,12,"Please confirm what allergies, medications, and respiratory ...",18.19,5332.9,97,18.67,2463.6,46,1.03,598,0.286,29.88,3075.0
+patient_03_trauma,Musculoskeletal Trauma & Hemorrhage Risk,1,I fell down the stairs and my right ankle is visibly deforme...,19.24,2962.8,57,20.75,2265.5,47,1.08,0,1.0,45.0,3075.0
+patient_03_trauma,Musculoskeletal Trauma & Hemorrhage Risk,2,It happened about 30 minutes ago on concrete steps....,19.92,2510.6,50,20.71,2365.6,49,1.04,0,1.0,45.0,3075.0
+patient_03_trauma,Musculoskeletal Trauma & Hemorrhage Risk,3,I heard a very loud snapping pop sound when my foot twisted....,16.39,2013.2,33,18.52,2645.3,49,1.13,0,1.0,45.0,3075.0
+patient_03_trauma,Musculoskeletal Trauma & Hemorrhage Risk,4,"I cannot put any weight on it whatsoever, even for a second....",14.0,2357.2,33,16.71,2273.8,38,1.19,80,0.706,24.0,3075.0
+patient_03_trauma,Musculoskeletal Trauma & Hemorrhage Risk,5,There is a small open cut on the skin where the bone is prot...,15.45,2265.1,35,17.45,2177.3,38,1.13,144,0.571,24.0,3075.0
+patient_03_trauma,Musculoskeletal Trauma & Hemorrhage Risk,6,My brother put a clean towel around the cut to stop the blee...,17.21,2789.4,48,18.55,2533.8,47,1.08,207,0.489,24.75,3075.0
+patient_03_trauma,Musculoskeletal Trauma & Hemorrhage Risk,7,"Yes, I feel cold and slightly dizzy from the intense pain....",14.89,2551.4,38,17.42,2181.9,38,1.17,275,0.425,25.38,3075.0
+patient_03_trauma,Musculoskeletal Trauma & Hemorrhage Risk,8,I did not hit my head or lose consciousness during the fall....,15.07,2787.3,42,17.84,2074.2,37,1.18,326,0.404,27.62,3075.0
+patient_03_trauma,Musculoskeletal Trauma & Hemorrhage Risk,9,Do you have a wheelchair or stretcher available immediately?...,15.27,2619.0,40,18.31,2567.6,47,1.2,377,0.379,28.75,3075.0
+patient_03_trauma,Musculoskeletal Trauma & Hemorrhage Risk,10,My last dose of Eliquis was this morning at 8 AM....,14.28,2450.5,35,18.13,2536.6,46,1.27,437,0.364,31.25,3075.0
+patient_03_trauma,Musculoskeletal Trauma & Hemorrhage Risk,11,My toes on that foot still feel warm and I can wiggle them a...,14.67,2454.8,36,16.99,1883.2,32,1.16,518,0.319,30.38,3075.0
+patient_03_trauma,Musculoskeletal Trauma & Hemorrhage Risk,12,"Summarize my injury, blood thinner medication, and antibioti...",14.42,3259.7,47,17.53,3080.7,54,1.22,590,0.28,28.75,3075.0

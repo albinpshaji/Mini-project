@@ -25,6 +25,10 @@ slm:
   lookahead_max_candidates: 12          # Max candidate sequences in L2 cache budget
   bild_entropy_threshold: 0.15          # BiLD fallback entropy threshold (Delta p < 0.15)
   speculative_pre_emission: true        # Phase 4: Speculative Acoustic Pre-Emission
+  use_snapkv: true                      # Phase 5: SnapKV Attention Anchor Pruning & Cache Compression
+  snapkv_observation_window: 48         # Tokens for recent observation window (DuoAttention streaming heads)
+  snapkv_max_tokens: 512                # Max history tokens under compression
+  snapkv_trigger_turn_threshold: 4      # Turns before compression activates
 
 tts:
   backend: "piper"

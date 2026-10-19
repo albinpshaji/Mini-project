@@ -795,8 +795,9 @@ def stream_chat_generator(user_text: str):
 
     total_lat_ms = int((time.time() - t_start) * 1000)
     vram_status = resource_scheduler.check_budget() if resource_scheduler else {}
+    snapkv_telemetry = slm_engine.get_snapkv_telemetry() if slm_engine and hasattr(slm_engine, "get_snapkv_telemetry") else {}
 
-    yield f"data: {json.dumps({'type': 'done', 'agent_response': assembled_response, 'audio_base64': full_audio_base64, 'is_emergency': False, 'slots': session.latest_slots, 'total_latency_ms': total_lat_ms, 'vram': vram_status})}\n\n"
+    yield f"data: {json.dumps({'type': 'done', 'agent_response': assembled_response, 'audio_base64': full_audio_base64, 'is_emergency': False, 'slots': session.latest_slots, 'total_latency_ms': total_lat_ms, 'vram': vram_status, 'snapkv': snapkv_telemetry})}\n\n"
 
 
 @app.post("/api/chat/stream")
@@ -947,6 +948,8 @@ def process_audio_pipeline(audio_bytes: bytes, filename_hint: str = "speech.webm
 
         if slm_engine is not None and hasattr(slm_engine, "get_lookahead_telemetry"):
             speculative_info["lookahead"] = slm_engine.get_lookahead_telemetry()
+        if slm_engine is not None and hasattr(slm_engine, "get_snapkv_telemetry"):
+            speculative_info["snapkv"] = slm_engine.get_snapkv_telemetry()
 
     session.history.append({"role": "assistant", "text": agent_response})
 

@@ -1,25 +1,25 @@
 {
-  "run_id": "ttfa_20261019_131906",
-  "timestamp": "2026-10-19T13:21:59.866388",
+  "run_id": "ttfa_20261019_144432",
+  "timestamp": "2026-10-19T14:47:58.536231",
   "phase": "Phase 3/4: Acoustic Pre-Warming & Pipelined TTFA",
-  "branch": "feature/lookahead-speculation-phase4",
+  "branch": "feature/snapkv-pruning-phase5",
   "model_name": "qwen3.5:4b",
   "cases_evaluated": 60,
   "ttfa": {
-    "baseline_mean_ms": 1329.02,
-    "baseline_median_ms": 1103.61,
-    "mean_ms": 1276.51,
-    "median_ms": 1060.5,
-    "p90_ms": 2241.35,
-    "cold_turn_ms": 60.1
+    "baseline_mean_ms": 1849.66,
+    "baseline_median_ms": 1383.71,
+    "mean_ms": 1793.72,
+    "median_ms": 1356.35,
+    "p90_ms": 3233.45,
+    "cold_turn_ms": 89.06
   },
   "underruns": {
-    "underrun_count": 0,
-    "underrun_rate_percent": 0.0,
-    "mean_lead_margin_ms": 2503.49
+    "underrun_count": 1,
+    "underrun_rate_percent": 1.67,
+    "mean_lead_margin_ms": 2387.85
   },
-  "opener_hit_rate_percent": 76.7,
-  "speedup_vs_baseline": 1.04,
-  "summary_json_path": "eval/results/runs/20261019_131906_phase3_ttfa_benchmark/summary.json",
-  "raw_csv_path": "eval/results/runs/20261019_131906_phase3_ttfa_benchmark/raw_ttfa_metrics.csv"
+  "opener_hit_rate_percent": 81.7,
+  "speedup_vs_baseline": 1.03,
+  "summary_json_path": "eval/results/runs/20261019_144432_phase3_ttfa_benchmark/summary.json",
+  "raw_csv_path": "eval/results/runs/20261019_144432_phase3_ttfa_benchmark/raw_ttfa_metrics.csv"
 }
