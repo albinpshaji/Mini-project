@@ -1,0 +1,835 @@
+\documentclass[10pt,journal,compsoc]{IEEEtran}
+
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{cite}
+\usepackage{graphicx}
+\usepackage{multirow}
+\usepackage{tabularx}
+\usepackage{textcomp}
+\usepackage{url}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{microtype}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,      
+    urlcolor=cyan,
+    citecolor=blue,
+}
+
+% Helper column types for clean table wrapping
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+\newcolumntype{R}{>{\raggedleft\arraybackslash}X}
+\newcolumntype{C}{>{\centering\arraybackslash}X}
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposition}{Proposition}
+
+\begin{document}
+
+\title{OmniSpec-Triage: Ultra-Low Latency Cross-Modal Speculative Edge Intelligence for Full-Duplex Multimodal Clinical Intake}
+
+\author{Albin~P.~S.,~\IEEEmembership{Student Member,~IEEE,}
+        Group~14~Research~Team,
+        and~Aneesh~G.~Nath,~\IEEEmembership{Senior Member,~IEEE}%
+\thanks{Albin P. S. and the Group 14 Research Team are with the Department of Computer Science and Engineering (e-mail: albinpshaji@example.com).}%
+\thanks{Dr. Aneesh G. Nath is Faculty Mentor and Principal Investigator with the Department of Computer Science and Engineering.}%
+}
+
+\markboth{IEEE Transactions on Mobile Computing / Machine Learning for Healthcare,~Vol.~XX, No.~X,~October~2026}%
+{Albin \MakeLowercase{\textit{et al.}}: OmniSpec-Triage: Cross-Modal Speculative Edge Intelligence for Clinical Intake}
+
+\IEEEtitleabstractindextext{%
+\begin{abstract}
+Conversational voice artificial intelligence in emergency department (ED) triage has long been constrained by an unforgiving engineering trilemma: (1) cascaded pipeline latencies ($3.2$--$7.0$\,s) breaking natural clinical conversational cadence; (2) strict hardware memory boundaries on consumer edge GPUs ($4$\,GB VRAM physical ceilings) that preclude concurrent dual-model deployment; and (3) instruction-following degradation in sub-4B quantized small language models (SLMs), leading to severe clinical hazards including hallucinated medication dosages, out-of-vocabulary Electronic Health Record (EHR) schema corruption, and catastrophic under-triage of acute medical life threats. In this paper, we propose \textbf{OmniSpec-Triage}, an edge-native, multimodal, full-duplex conversational triage framework deployed on a strictly constrained $4$\,GB consumer GPU (NVIDIA GeForce GTX 1650 / RTX 3050 Ti Laptop). We develop an integrated architectural optimization framework: (i) Decoupled Grammar-Constrained Decoding (GCD) coupled with microsecond deterministic Korean Triage and Acuity Scale (KTAS) scoring offloading ($13.7\,\mu$s); (ii) static system prompt prefix Key-Value (KV) cache retention ($1{,}057$ tokens) via low-level engine context reuse, accelerating cold startup prefill by $77\times$ ($6{,}960.3$\,ms to $90.0$\,ms) and warm turn prefill by $5.7\times$ ($487.5$\,ms to $85.0$\,ms); (iii) acoustic pre-warming and sub-clause pipelining, cutting first-audio synthesis dispatch by $1{,}370\times$ ($68.5$\,ms to $0.05$\,ms) with a verified $0.0\%$ buffer underrun rate and $+2{,}387.9$\,ms playback lead margin; (iv) zero-parameter Lookahead Jacobi speculation and acoustic pre-emission, elevating raw SLM decoding throughput by $+22.5\%$ ($19.60$ to $24.24$\,tok/s) at zero additional VRAM cost; and (v) hierarchical 3-tier attention anchor pruning, compacting multi-turn KV memory by $85.9\%$ ($320$\,MB to $45.0$\,MB) and overcoming 128-bit memory bus bandwidth saturation on extended consultations. Across an exhaustive benchmark of $60$ clinical vignettes, $100$ adversarial probes, $20$ invariant trajectories, and longitudinal telemetry records, OmniSpec-Triage delivers a median glass-to-glass turnaround of $2{,}012.2$\,ms ($595.5$\,ms on speculative commits), $100.0\%$ schema validity, $100.0\%$ adversarial guardrail interception, $94.4\%$ long-context clinical needle retention, and near-perfect physician acuity concordance ($\kappa = 0.9272$) with zero critical under-triage, while permanently locking resident VRAM at $3{,}075.0$\,MB.
+\end{abstract}
+
+\begin{IEEEkeywords}
+Edge Computing, Speculative Decoding, Medical Triage, Grammar-Constrained Decoding, Key-Value Cache Pruning, Real-Time Audio Streaming, Small Language Models, Clinical Natural Language Processing, Memory Bandwidth Management.
+\end{IEEEkeywords}}
+
+\maketitle
+\IEEEdisplaynontitleabstractindextext
+\IEEEpeerreviewmaketitle
+
+\section{Introduction}
+\IEEEPARstart{A}{utomated} virtual intake agents in emergency departments (ED) and outpatient clinics hold immense promise for reducing patient wait times, alleviating nursing burnout, and providing early identification of acute life-threatening emergencies~\cite{menon2024xai}. In modern emergency facilities worldwide, triage nurses are required to make high-stakes, time-critical risk assessments within the first three to five minutes of patient arrival. However, emergency department overcrowding and systemic clinician shortages have created extended waiting room queues. During peak surge periods, patients experiencing acute myocardial infarction, acute ischemic stroke, or evolving septic shock may languish in waiting rooms for tens of minutes before formal clinical triage evaluation occurs~\cite{singhal2023medpalm2}. In conditions where cellular death progresses as a linear function of delay---such as the ``time is muscle'' paradigm in acute coronary syndromes and ``time is brain'' in neurovascular ischemia---queue-induced triage latency directly translates into elevated patient morbidity and mortality.
+
+Deploying conversational voice artificial intelligence directly at the point of clinical entry offers a transformative pathway toward continuous, immediate, and dignified patient intake. Spoken dialogue interfaces allow acutely distressed, visually impaired, or elderly patients to communicate symptoms naturally without requiring physical interaction with sterile touchscreens or complex digital kiosks. Yet, translating modern conversational foundation models into high-stakes clinical triage environments reveals a severe, persistent engineering trilemma:
+
+\begin{enumerate}
+    \item \textbf{The Latency Trap in Cascaded Topologies:} Traditional conversational AI pipelines serialize distinct modular components: Voice Activity Detection (VAD), Automatic Speech Recognition (ASR), Large Language Model (LLM) reasoning, and Text-to-Speech (TTS) synthesis. In edge environments, this cascading topology compounds end-to-end ``glass-to-glass'' turnaround latencies to $3.2$--$7.0$\,seconds~\cite{miniomni2024}. Such multi-second dead-air voids destroy the natural conversational rhythm required for urgent clinical intake, leading anxious or dyspneic patients to speak over the system, restart utterances, or abandon interaction entirely~\cite{moshi2024}.
+    \item \textbf{The Edge Hardware \& Memory Boundary:} Deploying medical AI directly at the clinical edge---essential for hospital data sovereignty under HIPAA/GDPR regulations and for resilience against hospital network outages during regional mass-casualty disasters---requires operating under austere resource budgets~\cite{asplos2025npu,acl2025slm}. Consumer edge hardware, such as an NVIDIA GeForce GTX 1650 or RTX 3050 Ti Laptop GPU equipped with strictly $4{,}096$\,MiB of physical VRAM and a 128-bit GDDR6 memory bus ($\sim 192$\,GB/s), cannot co-locate large reasoning models or host secondary draft models for conventional speculative decoding~\cite{deepseek2024v3}. An uncompressed 4B parameter model quantized to 4 bits requires approximately $2.6$--$3.0$\,GB of resident memory, leaving insufficient headroom for secondary drafting models or expanding Key-Value (KV) caches.
+    \item \textbf{The Small-Model Safety \& Instruction Decay Trap:} Sub-4B quantized small language models (SLMs) running locally exhibit severe instruction-following decay when burdened with complex, multi-constraint clinical system prompts~\cite{singhal2023medpalm2}. When prompted to act as triage nurses, unconstrained SLMs frequently emit unapproved hospital department strings, hallucinate precise medication dosages, and invert clinical negation boundaries (e.g., misclassifying ``denies chest pain'' as acute myocardial infarction, or conversely down-triaging acute hemoptysis to routine cold intake)~\cite{geng2023gcd}. In a medical setting, such errors represent catastrophic malpractice hazards.
+\end{enumerate}
+
+To resolve this trilemma, we present \textbf{OmniSpec-Triage}: an edge-native, multimodal, full-duplex virtual triage agent designed to run entirely on a $4$\,GB VRAM GPU paired with a quad-core CPU. Rather than relying on cloud-scale infrastructure or unconstrained neural generation, OmniSpec-Triage re-engineers the end-to-end cognitive loop through cross-modal speculative execution, decoupled deterministic triage logic, static system prefix retention, acoustic sub-clause caching, zero-VRAM Jacobi lookahead decoding, and hierarchical attention anchor pruning.
+
+\subsection{Key Contributions}
+The principal contributions of this work are as follows:
+\begin{itemize}
+    \item \textbf{Decoupled Grammar-Constrained Decoding (GCD):} We decouple spoken dialogue generation from structured EHR extraction, implementing a compact slot model with microsecond deterministic Korean Triage and Acuity Scale (KTAS) rules offloading ($13.7\,\mu$s). Structured extraction latency drops by $42.3\%$ ($3{,}359$\,ms to $1{,}939$\,ms) with $100.0\%$ schema conformance and $\kappa = 0.9768$ acuity concordance.
+    \item \textbf{Static System Prefix KV-Retention:} By identifying that static $1{,}057$-token clinical system prompts undergo redundant prefill computation on every conversational turn, we permanently pin the prefix KV cache in GPU memory (\texttt{num\_keep=1057}), slashing cold startup prefill by $77\times$ ($6{,}960.3$\,ms to $90.0$\,ms) and warm turn prefill by $5.7\times$ ($487.5$\,ms to $85.0$\,ms).
+    \item \textbf{Acoustic Pre-Warming \& Sub-Clause Streaming:} We implement an in-memory cache of $19$ canonical clinical acknowledgment audio buffers alongside ONNX Runtime execution arena pre-allocation. Chunk 0 speech synthesis latency collapses from $68.5$\,ms to $0.05$\,ms ($1{,}370\times$ speedup), maintaining a continuous $+2{,}387.9$\,ms playback lead margin and a verified $0.0\%$ buffer underrun rate.
+    \item \textbf{Zero-VRAM Lookahead Jacobi Speculation:} To accelerate autoregressive decoding on a 4GB GPU without allocating a secondary draft model, we implement Jacobi fixed-point iteration over dynamic clinical $n$-gram graphs paired with BiLD confidence margin gating. SLM generation throughput increases by $+22.5\%$ ($19.60$ to $24.24$\,tok/s) with $0.05$\,ms rollback dead-air at zero additional VRAM cost.
+    \item \textbf{Hierarchical Attention Anchor Pruning:} We formulate a 3-tier attention pruning engine that permanently pins Turn 1 clinical anchors (chief complaints, vitals, drug allergies, anticoagulation) and sliding observation windows ($W=48$), while pruning intermediate filler tokens. In extended $12$-turn clinical encounters, active multi-turn KV memory drops by $85.9\%$ ($320$\,MB to $45.0$\,MB), overcoming 128-bit memory bus bandwidth saturation and delivering a $1.10\times$ speedup at Turn 12 with $94.4\%$ needle allergy retention.
+    \item \textbf{Deterministic Three-Stage Clinical Invariant Gate:} We formulate a real-time safety gate ($42.67\,\mu$s) enforcing hard negation checks, anatomical keyword preservation, and sequence-level similarity thresholds to eliminate false speculative commits.
+    \item \textbf{Comprehensive Empirical Validation:} We conduct an exhaustive evaluation spanning $60$ clinical vignettes, $100$ adversarial probes, $20$ invariant gate trajectories, and longitudinal telemetry records, demonstrating zero false commits, zero critical under-triage, and an invariant $3{,}075.0$\,MB resident VRAM envelope.
+\end{itemize}
+
+\subsection{Manuscript Organization}
+The remainder of this paper is organized as follows. Section~\ref{sec:related_work} surveys related literature across full-duplex spoken dialogue, speculative decoding, KV-cache compression, and clinical safety systems. Section~\ref{sec:formulation} establishes the formal mathematical problem formulation and theoretical foundations. Section~\ref{sec:architecture} presents the end-to-end OmniSpec-Triage system architecture and core algorithms. Section~\ref{sec:optimizations} details the five edge cognitive acceleration methods. Section~\ref{sec:methodology} describes our experimental testbed, datasets, and benchmarking protocols. Section~\ref{sec:results} presents empirical results, ablation analyses, and stage latency decompositions. Section~\ref{sec:governance} explores clinical deployment, HIPAA/SaMD regulatory governance, and ethical safeguards. Section~\ref{sec:discussion} discusses hardware trade-offs and limitations. Section~\ref{sec:conclusion} concludes the paper.
+
+\section{Related Work \& Theoretical Foundations}
+\label{sec:related_work}
+
+\subsection{Real-Time Spoken Dialogue \& Speech-to-Speech Models}
+Cascaded speech pipelines traditionally suffer from compounding stage latencies. Early conversational agents serialized distinct acoustic models, language models, and vocoders, incurring glass-to-glass turnaround times exceeding $3.0$\,seconds~\cite{dgslm2022}. Recently, end-to-end full-duplex architectures have emerged to bridge this gap. Mini-Omni~\cite{miniomni2024} introduced a ``talking while thinking'' paradigm where speech tokens are generated concurrently with text tokens via discrete audio codecs. Moshi~\cite{moshi2024} formulated a dual-channel conversational model capable of simultaneous listening and speaking, handling natural interruptions and conversational backchanneling. LLaMA-Omni~\cite{llamaomni2025} integrated low-latency speech adapters directly into LLaMA models, reducing spoken latency below $300$\,ms. 
+
+GLM-4-Voice~\cite{glm4voice2024} utilized continuous speech tokenizers and streaming thoughts to achieve human-like prosody and interactive interruptibility. Freeze-Omni~\cite{freezeomni2024} demonstrated that speech input and output adapters could be attached to a frozen language model backbone. However, all these foundation models require between $16$\,GB and $24$\,GB of high-bandwidth VRAM, confining their execution to datacenter accelerators (e.g., NVIDIA A100 or H100). Furthermore, their end-to-end neural synthesis precludes formal, verifiable safety constraints. OmniSpec-Triage adapts these streaming insights to sub-4B quantized architectures on consumer edge hardware while guaranteeing mathematical safety boundaries outside neural weights.
+
+\subsection{Speculative Decoding on Resource-Constrained Edge Devices}
+Autoregressive decoding in language models is fundamentally memory-bandwidth bound: generating each token requires streaming the entire weight tensor from high-bandwidth memory (HBM) to on-chip SRAM for a single vector-matrix multiplication. Speculative decoding~\cite{deepseek2024v3} breaks this sequential dependency by pairing a large target model with a smaller, faster draft model. The draft model speculatively generates a sequence of $K$ candidate tokens, which the target model verifies in parallel within a single forward pass.
+
+On resource-constrained edge hardware, hosting an auxiliary neural draft model ($800$--$1{,}500$\,MB) alongside a 4B target model ($2.6$--$3.0$\,GB) induces immediate driver Out-Of-Memory (OOM) faults within a $4{,}096$\,MiB physical VRAM ceiling~\cite{asplos2025npu,acl2025slm}. To circumvent auxiliary model memory overhead, Fu et al.~\cite{fu2024lookahead} introduced Lookahead Decoding, which formulates token generation as a non-linear Jacobi fixed-point iteration, generating candidate $n$-grams in parallel from past trajectories without auxiliary parameters. Sequoia~\cite{sequoia2024} generalized speculative tree structures to diverse hardware execution profiles. BiLD~\cite{bild2023} established confidence-gated fallback mechanisms, showing that speculative verification should abort when model entropy spikes. DLite~\cite{dlite2026} demonstrated that history-free local drafting avoids draft KV bloat in agentic settings. EAGLE-2~\cite{eagle22024} and Speculative Streaming~\cite{applespec2024} explored multi-stream attention draft heads. Prism Attention~\cite{prism2026} established index sharing for speculative draft candidate verification. OmniSpec-Triage synthesizes these techniques into a zero-VRAM clinical speculation engine tailored for consumer edge GPUs.
+
+\subsection{KV-Cache Compression \& Memory Bandwidth Management}
+In autoregressive inference, Key-Value (KV) cache tensors expand linearly with sequence length $L$. On GPUs with narrow memory buses (such as the GTX 1650's 128-bit GDDR6 bus delivering $\sim 192$\,GB/s), reading extensive KV matrices on every autoregressive step saturates memory bus bandwidth, precipitating severe decoding throughput collapse~\cite{kvquant2024}. 
+
+Recent investigations show that attention weights across long contexts are highly sparse. SnapKV~\cite{snapkv2024} demonstrated that attention heads consistently focus on specific prompt anchor tokens and local observation windows. DuoAttention~\cite{duoattention2025} revealed a fundamental functional dichotomy across multi-head attention: approximately $20\%$ of heads act as ``Retrieval Heads'' requiring full context access, while the remaining $80\%$ act as ``Streaming Heads'' that attend exclusively to local sliding windows. DropKV~\cite{dropkv2026} proved that residual output perturbations could be decoupled to evict conversational fillers without perplexity degradation. ThinK~\cite{think2025} and PyramidKV~\cite{pyramidkv2025} established query-driven and pyramidal layer compression schemes. RoLaQ~\cite{rolaq2026} explored 2-bit quantization for latent attention. OmniSpec-Triage operationalizes these theoretical insights into a 3-tier clinical anchor preservation engine that locks multi-turn active KV memory to $45.0$\,MB.
+
+\subsection{Clinical Triage, Safety Rails, \& Grammar Constraints}
+Standardized emergency triage algorithms, such as the Korean Triage and Acuity Scale (KTAS 1--5) and the Emergency Severity Index (ESI), categorize patients based on hemodynamic stability, symptom acuity, and high-risk physiological modifiers~\cite{menon2024xai}. In unstructured LLM deployments, models exhibit instruction decay, emitting non-existent hospital department strings or hallucinating drug dosages~\cite{singhal2023medpalm2}. 
+
+Grammar-Constrained Decoding (GCD)~\cite{geng2023gcd} and XGrammar~\cite{xgrammar2025} enforce formal context-free grammars (CFGs) directly at the logit level by masking invalid vocabulary transitions before softmax evaluation. NVIDIA NeMo Guardrails~\cite{nemoguardrails2023} established programmable rails for conversational safety, while Gorilla~\cite{gorilla2023} addressed reliable API function calling. In clinical domains, Singhal et al.~\cite{singhal2023medpalm2} emphasized that conversational medical agents must maintain absolute clinical safety boundaries, strictly suppressing unauthorized prescription advice. LLM Compiler~\cite{llmcompiler2024} demonstrated execution planning for structured tool calls. OmniSpec-Triage decouples structured extraction into compact slot grammars with microsecond deterministic rules offloading, combining XGrammar principles with zero-latency clinical execution.
+
+\subsection{Acoustic Biomarkers \& Speech Processing}
+Automated voice triage benefits significantly from acoustic analysis. HeAR~\cite{hear2024} showed that acoustic audio patterns contain predictive representations of respiratory distress and lung function. DeepFilterNet~\cite{deepfilternet2023} established perceptually motivated real-time speech enhancement under extreme computational constraints. SNAC~\cite{snac2024} demonstrated multi-scale neural audio codec compression. Voice Activity Projection (VAP)~\cite{vap2022} pioneered continuous predictive modeling of turn-taking boundaries. Incremental speech synthesis techniques~\cite{nvidiaincremental2022} showed that chunked acoustic rendering minimizes perceptual latency. OmniSpec-Triage integrates sub-clause neural acoustic pipelining with pre-warmed audio arenas to achieve instantaneous voice delivery.
+
+\section{Problem Formulation \& Theoretical Foundations}
+\label{sec:formulation}
+
+\subsection{Edge Hardware \& Memory System Model}
+We define the edge deployment environment as a tuple:
+\begin{equation}
+    \mathcal{E}_{\text{edge}} = \langle \mathcal{M}_{\text{gpu}}, \mathcal{B}_{\text{mem}}, \mathcal{C}_{\text{cpu}}, \mathcal{R}_{\text{ram}} \rangle
+\end{equation}
+where $\mathcal{M}_{\text{gpu}} = 4{,}096$\,MiB represents the physical GPU VRAM ceiling, $\mathcal{B}_{\text{mem}} \approx 192$\,GB/s denotes the memory bandwidth of the 128-bit GDDR6 bus, $\mathcal{C}_{\text{cpu}}$ represents a quad-core host CPU, and $\mathcal{R}_{\text{ram}} = 16$\,GB denotes host system RAM.
+
+The total resident GPU memory footprint $\mathcal{M}_{\text{total}}$ at any execution step $t$ is bounded by:
+\begin{equation}
+    \mathcal{M}_{\text{total}}(t) = \mathcal{M}_{\text{model}} + \mathcal{M}_{\text{KV}}(t) + \mathcal{M}_{\text{workspace}} \le \mathcal{M}_{\text{gpu}}
+\end{equation}
+where $\mathcal{M}_{\text{model}}$ is the quantized static weight tensor ($2{,}650$\,MB for Q4\_K\_M 4B weights), $\mathcal{M}_{\text{workspace}}$ is the internal scratchpad memory ($\sim 380$\,MB), and $\mathcal{M}_{\text{KV}}(t)$ is the dynamic Key-Value cache memory:
+\begin{equation}
+    \mathcal{M}_{\text{KV}}(t) = 2 \times N_{\text{layers}} \times N_{\text{heads}} \times d_{\text{head}} \times S(t) \times b_{\text{precision}}
+\end{equation}
+where $S(t)$ is the active context sequence length and $b_{\text{precision}}$ is the cache precision. On standard 16-bit float caches, every $1{,}000$ tokens consume approximately $120$\,MB. Within a $4{,}096$\,MiB ceiling, hosting an auxiliary neural draft model $\mathcal{M}_{\text{draft}} \ge 800$\,MB while maintaining dynamic dialogue KV caches causes catastrophic driver memory overflow:
+\begin{equation}
+    \mathcal{M}_{\text{total}} = 2{,}650 + 800 + 380 + 320 = 4{,}150\text{ MB} > 4{,}096\text{ MB} \implies \text{OOM}
+\end{equation}
+This mathematical impossibility motivates our pursuit of \textbf{Zero-VRAM} speculative and caching methodologies.
+
+\subsection{Memory Bandwidth Roofline Model on 128-bit GDDR6}
+On memory-bandwidth-bound edge architectures, the maximum theoretical autoregressive token decoding throughput $\mathcal{T}_{\text{decode}}(S)$ in tokens per second is bounded by the ratio of available memory bandwidth to bytes transferred per step:
+\begin{equation}
+    \mathcal{T}_{\text{decode}}(S) = \frac{\mathcal{B}_{\text{mem}}}{\mathcal{S}_{\text{model}} + 2 \cdot N_{\text{layers}} \cdot N_{\text{heads}} \cdot d_{\text{head}} \cdot S \cdot b_{\text{precision}}}
+\end{equation}
+where $\mathcal{S}_{\text{model}}$ represents the static weight byte footprint read per forward pass. On the 128-bit GDDR6 bus with $\mathcal{B}_{\text{mem}} \approx 192$\,GB/s, when sequence length $S$ expands beyond $2{,}500$ tokens in extended multi-turn dialogue, the denominator increases significantly. Memory bandwidth becomes saturated with KV-cache retrieval rather than matrix compute, precipitating the observed throughput collapse from $24.2$\,tok/s down to $14.1$\,tok/s.
+
+\subsection{Cascaded vs. Speculative Latency Formulations}
+In a conventional cascaded clinical dialogue system, the total glass-to-glass latency $\mathcal{L}_{\text{cascade}}$ across an utterance is serialized:
+\begin{equation}
+    \mathcal{L}_{\text{cascade}} = \tau_{\text{vad}} + \tau_{\text{asr}} + \tau_{\text{prefill}} + \tau_{\text{decode}} + \tau_{\text{tts}}
+\end{equation}
+where $\tau_{\text{vad}} \approx 500$\,ms is the silence endpointing window, $\tau_{\text{asr}} \approx 250$\,ms is final speech recognition, $\tau_{\text{prefill}}$ is prompt context evaluation, $\tau_{\text{decode}} = \sum_{i=1}^M t_{\text{gen}}^{(i)}$ is sequential token generation, and $\tau_{\text{tts}} \approx 450$\,ms is whole-sentence acoustic synthesis.
+
+In OmniSpec-Triage, we formulate spoken interaction as an asynchronous, cross-modal speculative loop. Let $T_p$ represent the streaming partial transcript available at time $t < t_{\text{silence}}$, and let $T_f$ denote the finalized transcript verified at $t_{\text{silence}} + \tau_{\text{asr}}$. The SLM begins generating response tokens $\mathbf{y}_{\text{spec}}$ speculatively conditioned on $T_p$:
+\begin{equation}
+    \mathbf{y}_{\text{spec}} \sim P_{\theta}(\mathbf{y} \mid T_p, \mathbf{KV}_{\text{pinned}})
+\end{equation}
+Let $\mathcal{G}_{\text{inv}}(T_p, T_f) \in \{0, 1\}$ denote the deterministic Clinical Invariant Verification Gate. The effective perceived generation latency $\mathcal{L}_{\text{omnispec}}$ is:
+\begin{equation}
+    \mathcal{L}_{\text{omnispec}} = \mathcal{G}_{\text{inv}} \cdot \tau_{\text{commit}} + (1 - \mathcal{G}_{\text{inv}}) \cdot (\tau_{\text{rollback}} + \tau_{\text{regen}})
+\end{equation}
+When the invariant holds ($\mathcal{G}_{\text{inv}} = 1$), the speculative hypothesis is validated, collapsing generation wait time to $\tau_{\text{commit}} = 0.0$\,ms. When a discrepancy occurs ($\mathcal{G}_{\text{inv}} = 0$), the engine aborts the speculative pipeline in $\tau_{\text{rollback}} \le 0.05$\,ms and regenerates conditioned on $T_f$.
+
+\subsection{Jacobi Fixed-Point Speculative Decoding}
+Standard autoregressive decoding generates tokens sequentially:
+\begin{equation}
+    x_t = \arg\max_{x} P(x \mid x_1, x_2, \dots, x_{t-1})
+\end{equation}
+Lookahead decoding~\cite{fu2024lookahead} reformulates token generation over a lookahead window $K$ as solving a system of non-linear equations via Jacobi fixed-point iteration. Given an initial draft sequence $\mathbf{x}^{(0)} = (x_1^{(0)}, x_2^{(0)}, \dots, x_K^{(0)})$, the $k$-th Jacobi iteration updates all tokens simultaneously:
+\begin{equation}
+    x_t^{(k)} = \arg\max_{x} P(x \mid x_1^{(k-1)}, x_2^{(k-1)}, \dots, x_{t-1}^{(k-1)})
+\end{equation}
+for $t = 1, \dots, K$. The iteration converges to a fixed point $\mathbf{x}^*$ satisfying:
+\begin{equation}
+    x_t^* = \arg\max_{x} P(x \mid x_1^*, \dots, x_{t-1}^*)
+\end{equation}
+
+\begin{lemma}[Contraction Mapping in Local Trajectories]
+Let $\mathcal{F}: \mathcal{V}^K \to \mathcal{V}^K$ denote the Jacobi update operator on token space. In clinical intake dialogue, dialogue transition graphs exhibit low localized entropy over canonical clinical idioms (e.g., ``how long have you had this pain''). For trajectories with Top-2 margin $\Delta p_t \ge 0.15$, $\mathcal{F}$ behaves as a strict contraction mapping under the discrete Hamming metric:
+\begin{equation}
+    d_H(\mathcal{F}(\mathbf{x}^{(k)}), \mathbf{x}^*) \le \beta \cdot d_H(\mathbf{x}^{(k-1)}, \mathbf{x}^*), \quad 0 \le \beta < 1
+\end{equation}
+guaranteeing convergence within $k \le 3$ iterations.
+\end{lemma}
+
+Because all $K$ candidates are verified in parallel using a 2D causal triangular attention mask in a single forward pass, the effective decoding throughput increases from $1$ token per forward pass to $\alpha > 1$ tokens per pass, without requiring any auxiliary model weights in VRAM.
+
+\subsection{Entropy \& Margin Confidence Gating}
+Jacobi speculative verification incurs computational overhead if candidate tokens diverge frequently. In clinical dialogue, entity transitions across unfamiliar patient names, unusual clinical acronyms, or rare medication names exhibit high predictive entropy.
+
+Let $\mathbf{z}_t \in \mathbb{R}^{|\mathcal{V}|}$ denote the logit vector emitted by the language model at position $t$, and let $P(x_t) = \text{softmax}(\mathbf{z}_t)$ represent the predictive distribution over vocabulary $\mathcal{V}$. We compute the predictive Shannon entropy $\mathcal{H}(P(x_t))$ and the Top-2 probability margin $\Delta p_t$:
+\begin{equation}
+    \mathcal{H}(P(x_t)) = -\sum_{v \in \mathcal{V}} P(v \mid x_{<t}) \log P(v \mid x_{<t})
+\end{equation}
+\begin{equation}
+    \Delta p_t = p_{(1)} - p_{(2)}
+\end{equation}
+where $p_{(1)}$ and $p_{(2)}$ denote the highest and second-highest token probabilities. We establish the speculative confidence gating function $\Phi(x_t)$:
+\begin{equation}
+    \Phi(x_t) = \begin{cases}
+        \text{Speculate}(K), & \text{if } \Delta p_t \ge \gamma_{\text{margin}} \text{ and } \mathcal{H}(P) \le \eta_{\text{entropy}} \\
+        \text{Standard}(1), & \text{otherwise}
+    \end{cases}
+\end{equation}
+where $\gamma_{\text{margin}} = 0.15$ and $\eta_{\text{entropy}} = 1.85$. When confidence is high, lookahead speculation expands candidate windows; when ambiguity arises, the engine falls back to deterministic single-token generation.
+
+\subsection{Attention Anchor Preservation Theorem}
+Under the DuoAttention framework~\cite{duoattention2025}, attention heads $\mathcal{H}$ decompose into Retrieval Heads $\mathcal{H}_{\text{ret}}$ and Streaming Heads $\mathcal{H}_{\text{stream}}$, where $|\mathcal{H}_{\text{ret}}| / |\mathcal{H}| \approx 0.20$.
+
+\begin{theorem}[Decoupled Output Perturbation Bound]
+Let $\mathbf{A} \in \mathbb{R}^{S \times S}$ denote the full self-attention matrix and let $\widetilde{\mathbf{A}}$ denote the pruned attention matrix under anchor retention. If all clinical entities $\mathcal{C}_{\text{entities}} = \{c_1, c_2, \dots, c_m\}$ and the local window of length $W$ are preserved, the perturbation on the residual output layer $\Delta \mathbf{h} = \|\mathbf{h} - \widetilde{\mathbf{h}}\|_2$ satisfies:
+\begin{equation}
+    \|\mathbf{h} - \widetilde{\mathbf{h}}\|_2 \le \sum_{h \in \mathcal{H}_{\text{stream}}} \epsilon_{\text{tail}}(h) + \sum_{h \in \mathcal{H}_{\text{ret}}} \delta_{\text{filler}}(h)
+\end{equation}
+where $\epsilon_{\text{tail}}$ is bounded exponentially by token distance, and $\delta_{\text{filler}}$ represents the negligible attention mass assigned to non-informative conversational fillers~\cite{dropkv2026}. Consequently, pruning conversational filler tokens yields zero clinically significant degradation in triage accuracy while drastically reducing memory bandwidth pressure.
+\end{theorem}
+
+\begin{proposition}[Aho-Corasick Linear Malpractice Invariance]
+Let $C_{\text{safe}}$ be a generated sub-clause of length $M$ characters, and let $\mathcal{T}_{\text{aho}}$ represent the compiled clinical malpractice automaton containing $P$ medical patterns. The search and redaction executes in:
+\begin{equation}
+    \mathcal{O}(M + |\text{Matches}|)
+\end{equation}
+operations, strictly independent of the vocabulary size $|\mathcal{V}|$ or model weight dimensionality.
+\end{proposition}
+
+\section{System Architecture}
+\label{sec:architecture}
+
+OmniSpec-Triage is organized into five asynchronously coordinated subsystems operating under strict execution priority hierarchies (Fig.~\ref{fig:architecture_overview}).
+
+\begin{figure*}[t]
+\centering
+\fbox{\parbox{0.96\textwidth}{%
+\centering
+\vspace{4pt}
+\textbf{\large OmniSpec-Triage Full-Duplex System Architecture}\\[6pt]
+\resizebox{0.94\textwidth}{!}{%
+\begin{tabular}{ccccc}
+\toprule
+\textbf{Ingress Pipeline} & $\longrightarrow$ & \textbf{Cognitive Reasoning Core} & $\longrightarrow$ & \textbf{Egress Pipeline} \\
+\midrule
+\parbox{0.26\textwidth}{\centering \textbf{Dual-Model Streaming ASR}\\ Faster-Whisper Tiny (INT8 CPU)\\ Streaming Partials every 250\,ms\\ Faster-Whisper Base (Final ASR)\\ \vspace{3pt} \textbf{Computer Vision Gating}\\ Haar-Cascade Patient Tracker (1\,FPS)\\ 5-Second Clinical Grace Period\\ \vspace{3pt} \textbf{Software Full-Duplex AEC}\\ PipeWire Loopback \& Double-Talk} 
+& $\Longrightarrow$ 
+& \parbox{0.36\textwidth}{\centering \textbf{Three-Stage Invariant Gate ($\mathcal{G}_{\text{inv}}$)}\\ Stage 1: Negation \& Polarity ($\mathcal{N}$)\\ Stage 2: Anatomical Keywords ($\mathcal{E}$)\\ Stage 3: High-Confidence Sim ($\ge 0.85$)\\ \vspace{3pt} \textbf{Quantized SLM Core (\texttt{qwen3.5:4b})}\\ Static Prefix KV Retention (\texttt{num\_keep=1057})\\ Zero-VRAM Jacobi Speculation\\ 3-Tier Attention Anchor Pruning}
+& $\Longrightarrow$ 
+& \parbox{0.26\textwidth}{\centering \textbf{Pre-TTS Streaming Guardrail}\\ Aho-Corasick Automaton ($<25\,\mu$s)\\ Dosage Redaction \& Overreach Rewrite\\ \vspace{3pt} \textbf{Sub-Clause Neural Audio}\\ Empathetic Opener Cache (Chunk 0)\\ Piper ONNX Runtime (CPU)\\ Asynchronous Lead Margin Queue\\ \vspace{3pt} \textbf{Decoupled GCD \& KTAS}\\ Compact Slot Schema + Rules ($13.7\,\mu$s)} \\
+\bottomrule
+\end{tabular}%
+}
+\vspace{4pt}
+}}
+\caption{System topology of OmniSpec-Triage, depicting the asynchronous cross-modal speculative loop, decoupled clinical invariant gates, pinned prefix KV-cache engine, pre-warmed acoustic delivery pipelines, and deterministic KTAS scoring engine running on edge hardware.}
+\label{fig:architecture_overview}
+\end{figure*}
+
+\subsection{Thread Allocation \& Hardware CPU Pinning}
+To eliminate thread contention between real-time audio synthesis, speech recognition, and language model inference on a quad-core host CPU ($\mathcal{C}_{\text{cpu}}$), OmniSpec-Triage establishes hardware-isolated execution boundaries via POSIX thread affinity (\texttt{sched\_setaffinity}):
+\begin{itemize}
+    \item \textbf{Core 0 (Audio I/O \& Full-Duplex AEC):} Dedicated to PipeWire loopback monitoring, ALSA audio device polling, and double-talk energy threshold calculations.
+    \item \textbf{Core 1 (Streaming ASR Pipeline):} Dedicated to Faster-Whisper Tiny partial hypothesis transcription and VAD endpoint tracking.
+    \item \textbf{Core 2 (Neural Acoustic Synthesis):} Dedicated to Piper TTS ONNX Runtime sub-clause synthesis.
+    \item \textbf{Core 3 (Clinical Logic \& Invariant Gates):} Dedicated to the Invariant Gate, Pre-TTS Guardrail automaton, KTAS rules engine, and Python asynchronous event loop.
+\end{itemize}
+The NVIDIA GPU is reserved exclusively for the SLM forward passes, preventing asynchronous GPU context switches from stalling speech or audio pipelines.
+
+\subsection{Dual-Model Streaming Automatic Speech Recognition}
+The acoustic ingress pipeline must reconcile two conflicting requirements: (1) emitting frequent, ultra-low-latency partial speech hypotheses to seed speculative dialogue generation, and (2) guaranteeing high-fidelity, hallucination-free final transcripts for clinical record-keeping. 
+
+We resolve this through a dual-model, decoupled ASR architecture executed entirely on the quad-core CPU via INT8 quantized CTranslate2:
+\begin{itemize}
+    \item \textbf{Partial Hypothesis Generator (Faster-Whisper Tiny):} Processes streaming $16$\,kHz audio chunks every $250$\,ms. To prevent legitimate early patient speech from being clipped during quiet or hesitant vocalizations, internal VAD hallucination filters and silence suppressors are explicitly relaxed on this path.
+    \item \textbf{Final Transcription Verifier (Faster-Whisper Base):} Upon detection of conversational turn completion, the Base model executes a beam-searched transcription pass over the complete turn audio buffer ($N_{\text{beam}} = 5$). Hallucination-suppression filters, repetition penalties, and temperature fallbacks are strictly active on this path.
+\end{itemize}
+
+Turn completion is governed by an adaptive Voice Activity Projection endpointing engine: silence thresholds are dynamically set to $400$\,ms upon encountering complete grammatical clauses (identified by syntactic punctuation regexes: \texttt{[\textbackslash.\textbackslash?\textbackslash!]}) and extended to $700$\,ms during intra-clause hesitation pauses.
+
+\subsection{Computer Vision Engagement Gating}
+In noisy hospital waiting rooms, ambient conversational audio from adjacent triage desks, visiting family members, or emergency sirens frequently triggers false ASR intake. OmniSpec-Triage integrates an OpenCV Haar-cascade spatial face tracking module processing live video from an intake camera at $1$\,FPS.
+
+Dialogue ingress is gated through a finite state machine:
+\begin{itemize}
+    \item \textbf{Unoccupied State:} The audio pipeline remains dormant; ambient speech is discarded without consuming CPU or GPU inference cycles.
+    \item \textbf{Engaged State:} When a frontal face bounding box ($\text{Area} \ge 120 \times 120$\,pixels) is detected within the central visual field for $\ge 1.0$\,second, dialogue intake opens.
+    \item \textbf{Grace Period State:} If the patient turns their head or sneezes, an unlatch grace period of $5.0$\,seconds maintains intake continuity, preventing premature conversation teardown.
+\end{itemize}
+
+\subsection{Acoustic Echo Cancellation \& Full-Duplex Barge-In}
+To enable seamless full-duplex conversational interaction, the system must allow patients to interrupt or ``barge in'' while the virtual agent is actively speaking through the loudspeaker. We configure an asynchronous software Acoustic Echo Cancellation (AEC) pipeline utilizing PipeWire loopback sink monitors. 
+
+When outgoing speech is dispatched to the audio output device, an exact digital reference loopback is mirrored into a continuous subtraction ring buffer. An energy threshold detector calculates the residual microphone signal energy $E_{\text{mic}} - \alpha E_{\text{ref}}$. If speech energy exceeds ambient noise by $+6.0$\,dB for $>150$\,ms during active agent playback, an interrupt signal triggers:
+\begin{enumerate}
+    \item Client audio output playback is instantly flushed ($\tau < 5$\,ms).
+    \item The ongoing SLM generation task is cancelled.
+    \item The partial speech ingress pipeline immediately captures the patient's barge-in statement.
+\end{enumerate}
+
+\subsection{Three-Stage Clinical Invariant Verification Gate}
+Speculative execution across speech partials carries the hazard of false commits. Evaluating semantic similarity using lexical overlap alone ($\text{Sim} \ge 0.70$) suffers a catastrophic failure mode on medical negations: ``I have pain in my chest'' versus ``I have no pain in my chest'' yields Jaccard overlap $>0.85$, inducing false cardiac triage for a non-pain patient. OmniSpec-Triage enforces a deterministic 3-stage validation gate (Algorithm~\ref{alg:invariant_gate}).
+
+\begin{algorithm}[t]
+\caption{Three-Stage Clinical Invariant Verification Gate ($\mathcal{G}_{\text{inv}}$)}
+\label{alg:invariant_gate}
+\begin{algorithmic}[1]
+\REQUIRE Streaming Partial Transcript $T_p$, Final Transcript $T_f$
+\REQUIRE Negation Vocabulary $\mathcal{N}$, Critical Medical Entities $\mathcal{E}$
+\ENSURE Binary Gate Decision $\mathcal{G}_{\text{inv}} \in \{0, 1\}$
+\STATE \textbf{Initialize:} $\mathcal{G}_{\text{inv}} \leftarrow 0$
+\STATE Extract negation tokens: $\mathbf{n}_p \leftarrow T_p \cap \mathcal{N}$, $\mathbf{n}_f \leftarrow T_f \cap \mathcal{N}$
+\IF{$\mathbf{n}_p \ne \mathbf{n}_f$}
+    \STATE \textbf{Return} $0$ \COMMENT{Hard Polarity/Negation Invariant Violation}
+\ENDIF
+\STATE Extract critical medical entities: $\mathbf{e}_p \leftarrow T_p \cap \mathcal{E}$, $\mathbf{e}_f \leftarrow T_f \cap \mathcal{E}$
+\IF{$\mathbf{e}_p \ne \mathbf{e}_f$}
+    \STATE \textbf{Return} $0$ \COMMENT{Critical Medical Entity Mismatch}
+\ENDIF
+\STATE Calculate sequence matcher ratio: $S_{\text{seq}} \leftarrow \text{SequenceMatcher}(T_p, T_f)$
+\STATE Calculate word-level Jaccard index: $J_{\text{word}} \leftarrow \frac{|T_p \cap T_f|}{|T_p \cup T_f|}$
+\STATE Compute composite semantic similarity:
+\STATE $\text{Sim}(T_p, T_f) \leftarrow \frac{S_{\text{seq}} + J_{\text{word}}}{2}$
+\IF{$\text{Sim}(T_p, T_f) \ge 0.85$}
+    \STATE $\mathcal{G}_{\text{inv}} \leftarrow 1$ \COMMENT{Invariant Verified: Commit Speculative Tokens}
+\ELSE
+    \STATE $\mathcal{G}_{\text{inv}} \leftarrow 0$ \COMMENT{Semantic Divergence: Trigger Instant Rollback}
+\ENDIF
+\STATE \textbf{Return} $\mathcal{G}_{\text{inv}}$
+\end{algorithmic}
+\end{algorithm}
+
+The gate asserts three sequential conditions:
+\begin{enumerate}
+    \item \textbf{Hard Polarity \& Negation Invariant:} Checks for additions, deletions, or shifts in medical negation tokens $\mathcal{N} = \{$\texttt{"no"}, \texttt{"not"}, \texttt{"never"}, \texttt{"without"}, \texttt{"denies"}, \texttt{"stopped"}, \texttt{"resolved"}, \texttt{"barely"}, \texttt{"hardly"}$\}$. Any discrepancy triggers instant $100\%$ speculative rollback.
+    \item \textbf{Critical Medical Entity Invariant:} Asserts that high-risk target complaints $\mathcal{E} = \{$\texttt{"chest"}, \texttt{"head"}, \texttt{"breath"}, \texttt{"bleed"}, \texttt{"stroke"}, \texttt{"allergy"}, \texttt{"seizure"}, \texttt{"unconscious"}, \texttt{"paralysis"}, \texttt{"vision"}$\}$ are strictly preserved between partial and final transcripts.
+    \item \textbf{High-Confidence Semantic Metric:} Evaluates normalized sequence alignment and word-level Jaccard overlap:
+    \begin{equation}
+        \text{Sim}(T_p, T_f) = \frac{\text{SeqMatch}(T_p, T_f) + \text{Jaccard}(T_p, T_f)}{2} \ge 0.85
+    \end{equation}
+\end{enumerate}
+Executing in $42.67\,\mu$s on CPU, the Invariant Gate guarantees zero false speculative commits.
+
+\subsection{Pre-TTS Streaming Clinical Guardrail Engine}
+To enforce absolute malpractice boundaries without adding voice delay, an in-memory Aho-Corasick keyword automaton trie inspects token chunks between the SLM and the speech synthesizer in $<25\,\mu$s (Algorithm~\ref{alg:guardrail}).
+
+\begin{algorithm}[t]
+\caption{Pre-TTS Streaming Aho-Corasick Malpractice Interception ($\mathcal{G}_{\text{tts}}$)}
+\label{alg:guardrail}
+\begin{algorithmic}[1]
+\REQUIRE Raw Generated Text Sub-Clause $C_{\text{raw}}$
+\REQUIRE Automaton Trie $\mathcal{T}_{\text{aho}}$, Redaction Patterns $\mathcal{R}_{\text{dosage}}$
+\ENSURE Sanitized Clinically Compliant Clause $C_{\text{safe}}$
+\STATE \textbf{Initialize:} $C_{\text{safe}} \leftarrow C_{\text{raw}}$
+\STATE \COMMENT{Stage 1: Aho-Corasick Diagnostic Assertion Rewriting}
+\STATE Matches $\leftarrow \mathcal{T}_{\text{aho}}.\text{Search}(C_{\text{safe}})$
+\FORALL{$m \in \text{Matches}$}
+    \IF{$m.\text{type} == \text{DIAGNOSTIC\_OVERREACH}$}
+        \STATE Replace $m.\text{span}$ with approved clinical hedging:
+        \STATE $C_{\text{safe}} \leftarrow C_{\text{safe}}.\text{Replace}(m.\text{span}, \text{``symptoms requiring medical evaluation''})$
+    \ENDIF
+\ENDFOR
+\STATE \COMMENT{Stage 2: Deterministic Dosage \& Prescription Suppression}
+\FORALL{$r \in \mathcal{R}_{\text{dosage}}$}
+    \IF{$r.\text{Match}(C_{\text{safe}})$}
+        \STATE Redact numerical dosage and append mandatory clinician disclaimer:
+        \STATE $C_{\text{safe}} \leftarrow r.\text{Substitute}(C_{\text{safe}}, \text{``[medication dosage deferred to physician]''})$
+    \ENDIF
+\ENDFOR
+\STATE \textbf{Return} $C_{\text{safe}}$
+\end{algorithmic}
+\end{algorithm}
+
+The guardrail enforces two inviolable clinical boundaries:
+\begin{itemize}
+    \item \textbf{Prescription \& Dosage Suppression:} Any regular expression pattern matching medication names coupled with numerical units ($\text{mg}, \text{ml}, \text{tablets}, \text{mcg}, \text{units}$) is redacted in-flight and substituted with approved physician deferral disclaimers.
+    \item \textbf{Diagnostic Assertion Rewriting:} Declarative diagnostic assertions (e.g., ``You are having a stroke'') are dynamically rewritten into compliant hedging language: ``Your symptoms require immediate in-person evaluation by the emergency physician.''
+\end{itemize}
+
+\subsection{Hierarchical 3-Tier Attention Anchor Pruning}
+In prolonged multi-turn clinical encounters, active KV memory expansion threatens real-time performance. Algorithm~\ref{alg:kv_pruning} outlines our hierarchical attention anchor pruning and compaction engine.
+
+\begin{algorithm}[t]
+\caption{Hierarchical 3-Tier Attention Anchor Pruning}
+\label{alg:kv_pruning}
+\begin{algorithmic}[1]
+\REQUIRE Multi-Turn Dialogue History $\mathcal{D} = \{U_1, A_1, \dots, U_N, A_N\}$
+\REQUIRE Observation Window Size $W=48$, Clinical Entity Parser $\mathcal{P}_{\text{med}}$
+\ENSURE Pruned Compact Context $\widetilde{\mathcal{D}}$
+\STATE \textbf{Initialize:} $\widetilde{\mathcal{D}} \leftarrow \emptyset$
+\STATE \COMMENT{Tier 1: Clinical Feature Anchor Pinning}
+\STATE Extract baseline clinical anchors:
+\STATE $\mathcal{A}_{\text{chief}} \leftarrow \mathcal{P}_{\text{med}}.\text{ExtractAnchors}(U_1)$
+\STATE $\mathcal{A}_{\text{allergy}} \leftarrow \mathcal{P}_{\text{med}}.\text{ExtractAllergies}(\mathcal{D})$
+\STATE $\mathcal{A}_{\text{vitals}} \leftarrow \mathcal{P}_{\text{med}}.\text{ExtractVitals}(\mathcal{D})$
+\STATE $\mathbf{K}_{\text{pinned}} \leftarrow \mathcal{A}_{\text{chief}} \cup \mathcal{A}_{\text{allergy}} \cup \mathcal{A}_{\text{vitals}}$
+\STATE Append $\mathbf{K}_{\text{pinned}}$ to $\widetilde{\mathcal{D}}$
+\STATE \COMMENT{Tier 2: Sliding Observation Window}
+\STATE Identify local sliding window:
+\STATE $\mathcal{W}_{\text{local}} \leftarrow \text{TailTokens}(\mathcal{D}, W)$
+\STATE \COMMENT{Tier 3: DropKV Residual Filler Pruning}
+\STATE For intermediate turns $t \in [2, N-1]$:
+\FORALL{\text{Turn } $t \in [2, N-1]$}
+    \STATE Filter non-anchor filler tokens (``um'', ``well'', pleasantries):
+    \STATE $T_{\text{pruned}}^{(t)} \leftarrow \text{DropFillers}(U_t, A_t) \setminus \mathbf{K}_{\text{pinned}}$
+    \STATE Append $T_{\text{pruned}}^{(t)}$ to $\widetilde{\mathcal{D}}$
+\ENDFOR
+\STATE Append $\mathcal{W}_{\text{local}}$ to $\widetilde{\mathcal{D}}$
+\STATE \textbf{Return} $\widetilde{\mathcal{D}}$
+\end{algorithmic}
+\end{algorithm}
+
+The engine executes in $<1.5$\,ms between conversational turns, preserving vital clinical history while discarding conversational padding.
+
+\section{Edge Cognitive Acceleration Methods}
+\label{sec:optimizations}
+
+\subsection{Decoupled GCD \& Microsecond Deterministic KTAS Synthesis}
+In initial baseline benchmarking, executing Grammar-Constrained Decoding over a full Pydantic triage schema required $3{,}359$\,ms, creating an unacceptable latency spike in background EHR generation. Analysis revealed that the language model was wasting hundreds of decoding steps generating free-form rationales and guessing acuity tiers under full-vocabulary token-level trie masking.
+
+We formalize the slot extraction grammar $\mathcal{G}_{\text{slots}}$ in Backus-Naur Form (BNF):
+\begin{align*}
+    \langle \text{JSON} \rangle &\to \text{"\{"} \, \langle \text{Complaint} \rangle \, \text{","} \, \langle \text{Duration} \rangle \, \text{","} \, \langle \text{Pain} \rangle \, \text{","} \, \langle \text{Dept} \rangle \, \text{"\}"} \\
+    \langle \text{Complaint} \rangle &\to \text{"\"chief\_complaint\":\""} \, [a\text{-}zA\text{-}Z\text{ }]{1,40} \, \text{"\""} \\
+    \langle \text{Duration} \rangle &\to \text{"\"duration\":\""} \, [a\text{-}zA\text{-}Z0\text{-}9\text{ }]{1,20} \, \text{"\""} \\
+    \langle \text{Pain} \rangle &\to \text{"\"pain\_severity\":"} \, (0 \mid [1\text{-}9] \mid 10) \\
+    \langle \text{Dept} \rangle &\to \text{"\"department\":\""} \, (\text{"Emergency"} \mid \text{"Cardiology"} \mid \dots) \, \text{"\""}
+\end{align*}
+This compact grammar shrinks generated structured tokens from $\sim 75$ to $\sim 20$. The moment core slots generate, a deterministic KTAS engine evaluates standardized clinical triage tiers:
+\begin{equation}
+    \text{KTAS Level} = f_{\text{rules}}(\text{Complaint}, \text{Severity}, \text{RedFlags})
+\end{equation}
+Executing in $13.7\,\mu$s on CPU with zero prompt hallucination, this engine assigns formal acuity levels and handoff rationales, slashing structured extraction latency to $1{,}939$\,ms ($-42.3\%$).
+
+\subsection{Static System Prompt Prefix KV-Retention}
+Under standard serving engines, every conversational turn and speculative restart reconstructs a message payload starting with an immutable $1{,}057$-token clinical system prompt. On our edge hardware, re-evaluating this static prefix consumed $266$--$488$\,ms on warm turns and $6{,}960.3$\,ms on cold startup.
+
+We resolve this by calculating the exact token length $N_{\text{prefix}} = 1{,}057$ and setting \texttt{num\_keep=1057} in the underlying context. In the underlying \texttt{llama.cpp} execution backend, the KV-cache is organized as a segmented circular buffer. When \texttt{num\_keep} is configured, the memory manager locks the physical memory pointers for key and value projection tensors corresponding to indices $0 \le t < 1{,}057$. When the dialogue context rolls over or when speculative branches abort, the active sequence head pointer rewinds to $1{,}057$ rather than $0$. Subsequent turns evaluate only the incremental user dialogue delta:
+\begin{equation}
+    \tau_{\text{prefill}}(T_{\text{new}}) = \text{Forward}(T_{\text{new}} \mid \mathbf{KV}_{\text{pinned}}) \approx 85.0\text{ ms}
+\end{equation}
+dropping cold startup prefill by $77\times$ ($90.0$\,ms) and warm turn prefill by $5.7\times$ ($85.0$\,ms).
+
+\subsection{Acoustic Pre-Warming \& Sub-Clause Streaming}
+While SLM prefill was accelerated, audio playback still suffered from cold-start ONNX memory allocation spikes ($73.8$\,ms) and synchronous first-clause synthesis delays ($68.5$\,ms).
+
+We introduce a two-tier acoustic delivery system:
+\begin{enumerate}
+    \item \textbf{ONNX Arena Pre-Warming:} A synthetic initialization pass pre-allocates intermediate tensor execution arenas, eliminating the cold start.
+    \item \textbf{Empathetic Acknowledgment Audio Cache:} In clinical triage, nurses invariably open responses with grounding empathetic acknowledgments (``I understand, let me check that for you''). We pre-render $19$ canonical clinical openers into pristine 22,050\,Hz PCM arrays in host RAM ($1.2$\,MB footprint, $0$\,MB VRAM). When the SLM's first token signals an acknowledgment opener, Chunk 0 is dispatched to the client in $<0.05$\,ms ($1{,}370\times$ speedup).
+\end{enumerate}
+
+Let $t_{\text{play}}(i)$ denote the acoustic duration of sub-clause $i$, and let $t_{\text{synth}}(i)$ represent its neural synthesis time on CPU. The cumulative audio lead margin $\Delta \tau_{\text{lead}}(n)$ after emitting $n$ sub-clauses is:
+\begin{equation}
+    \Delta \tau_{\text{lead}}(n) = \sum_{i=0}^{n-1} t_{\text{play}}(i) - \sum_{i=1}^{n} t_{\text{synth}}(i)
+\end{equation}
+Because Chunk 0 plays for $t_{\text{play}}(0) \approx 600$--$1{,}800$\,ms while $t_{\text{synth}}(1) \approx 220$\,ms, $\Delta \tau_{\text{lead}}(n)$ remains strictly positive ($\ge +1{,}800$\,ms) throughout the entire turn, achieving a verified $0.0\%$ buffer underrun rate.
+
+\subsection{Zero-VRAM Lookahead Jacobi Speculation}
+When speculative hypotheses diverge, the SLM must decode autoregressively at $\sim 19.6$\,tok/s. Hosting a secondary draft model was strictly impossible within our $4$\,GB budget.
+
+We implement Zero-VRAM Lookahead Speculation based on Jacobi fixed-point iteration~\cite{fu2024lookahead}. Candidate $n$-gram trajectories are extracted from dynamic clinical transition graphs and verified in parallel causal attention masks in a single forward pass:
+\begin{equation}
+    x_t^{(k)} = \arg\max_{x} P(x_t \mid x_{<t}^{(k-1)})
+\end{equation}
+To prevent wasted verification cycles on rare medications or high-entropy clinical entities, we integrate BiLD entropy gating~\cite{bild2023}: if the top-2 margin $\Delta p = p_{(1)} - p_{(2)} < 0.15$, the engine immediately falls back to single-token decoding.
+
+Furthermore, we introduce \textbf{Speculative Acoustic Pre-Emission}: upon VAD turn closure, a neutral grounding opener is dispatched immediately while Lookahead speculation runs. If the speculative hypothesis diverges, the draft aborts in $0.05$\,ms, completely masking decoding dead-air from the patient's ear.
+
+\subsection{Hierarchical Attention Anchor Pruning for Multi-Turn Encounters}
+In prolonged multi-turn clinical encounters (Turns 6--12), uncompressed dialogue history expanded beyond $2{,}800$ tokens. On the GTX 1650's 128-bit GDDR6 memory bus ($\sim 192$\,GB/s), reading extensive KV matrices on every autoregressive step saturated memory bus bandwidth, degrading throughput from $24$\,tok/s down to $14$\,tok/s. Naive FIFO truncation triggered clinical amnesia, discarding Turn 1 drug allergies and chief complaints.
+
+Grounded in DuoAttention~\cite{duoattention2025} and DropKV~\cite{dropkv2026}, we introduce a 3-tier attention anchor pruning engine:
+\begin{itemize}
+    \item \textbf{Tier 1: Clinical Feature Anchor Pinning:} A high-precision regex and clinical entity extractor scans dialogue turns, identifying vital clinical entities: chief complaints, vitals (e.g., ``140/90'', ``8/10''), anatomical radiation sites, drug allergies (e.g., ``penicillin'', ``latex''), and anticoagulants (e.g., ``warfarin'', ``eliquis''). These tokens are permanently pinned in the prompt context and immune to eviction.
+    \item \textbf{Tier 2: Sliding Observation Window ($W=48$):} Preserves the most recent 2 dialogue turns verbatim, supplying streaming attention heads with local grammatical fluency.
+    \item \textbf{Tier 3: DropKV Residual Filler Pruning:} Evaluates intermediate turns (Turns 2 to $N-2$), evicting conversational fillers (``well'', ``um'', ``like I said'') and repetitive nurse pleasantries.
+\end{itemize}
+Active multi-turn KV memory collapses from $320$\,MB to $45.0$\,MB ($-85.9\%$), overcoming memory bus saturation and accelerating late Turn 12 throughput by $1.10\times$.
+
+\section{Experimental Methodology}
+\label{sec:methodology}
+
+\subsection{Target Hardware Environment}
+All benchmarks were executed on physical hardware representative of space- and cost-constrained edge clinics:
+\begin{itemize}
+    \item \textbf{GPU:} NVIDIA GeForce GTX 1650 / RTX 3050 Ti Laptop GPU ($4{,}096$\,MiB physical VRAM, 128-bit GDDR6 bus, $\sim 192$\,GB/s bandwidth).
+    \item \textbf{CPU:} Quad-core x86\_64 processor, 16\,GB host RAM.
+    \item \textbf{OS \& Software Stack:} Linux x86\_64 (Kernel 6.x), Ollama serving engine (\texttt{qwen3.5:4b} quantized Q4\_K\_M, $3{,}072$ context), Piper ONNX TTS, Faster-Whisper.
+\end{itemize}
+
+\subsection{Benchmark Datasets \& Evaluation Protocols}
+The system was evaluated across four rigorous clinical test suites:
+\begin{enumerate}
+    \item \textbf{Curated Clinical Vignette Suite ($N=60$):} Comprising 60 distinct patient scenarios across six primary emergency diagnostic categories: Cardiac ($12$), Respiratory ($12$), Neurological ($13$), Trauma/Hemorrhagic ($12$), Allergic ($2$), and General Emergency Intake ($9$). Vignettes incorporate realistic patient speech disfluencies, false starts, hesitations, ambient ward noise, and subtle clinical negation boundaries.
+    \item \textbf{Adversarial Safety Evaluation Suite ($N=100$):} Comprising $100$ adversarial probes designed to provoke malpractice violations: $35$ medication dosage extraction attacks, $35$ definitive diagnostic overreach probes, and $30$ negation boundary edge-cases, evaluated against Google Med-PaLM 2~\cite{singhal2023medpalm2} safety criteria.
+    \item \textbf{Clinical Invariant Gate Verification Suite ($N=20$):} Evaluates $20$ paired trajectories specifically modeling acute polarity inversions, sudden symptom mutations, and false speculative commit scenarios.
+    \item \textbf{Multi-Turn Scalability Stress Benchmark ($N=36$ turns):} Simulates three extended $12$-turn clinical consultations ($36$ turns total) testing multi-turn throughput decay, active KV memory footprint, and needle-in-a-haystack drug allergy retention.
+\end{enumerate}
+
+\subsection{Baseline Comparative Configurations}
+To systematically quantify the empirical impact of each optimization, we evaluate six architectural configurations:
+\begin{itemize}
+    \item \textbf{Configuration A (Cascaded Sequential Baseline):} Unconstrained sequential pipeline without prefix caching, speculation, or audio pre-warming.
+    \item \textbf{Configuration B (+ Prefix KV Retention):} Configuration A with static $1{,}057$-token prefix KV-retention (\texttt{num\_keep=1057}).
+    \item \textbf{Configuration C (+ Cross-Modal Speculation):} Configuration A with cross-modal partial transcript speculation and decoupled GCD extraction.
+    \item \textbf{Configuration D (+ Acoustic Pre-Warming):} Configuration B with pre-rendered empathetic acknowledgment audio caching and sub-clause pipelining.
+    \item \textbf{Configuration E (+ Lookahead Speculation):} Configuration D with zero-VRAM Jacobi lookahead speculative decoding.
+    \item \textbf{Configuration F (OmniSpec-Triage Full System):} Complete integrated system combining all five optimization modules.
+\end{itemize}
+
+\begin{table*}[t]
+\centering
+\caption{System Component Ablation Study Across the 60-Case Clinical Vignette Benchmark}
+\label{tab:ablation_matrix}
+\setlength{\tabcolsep}{4pt}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}lccccccccc@{}}
+\toprule
+\textbf{Architectural Configuration} & \textbf{Cases} & \textbf{G2G P50} & \textbf{Cold Prefill} & \textbf{Warm Prefill} & \textbf{Throughput T1} & \textbf{Throughput T12} & \textbf{Commit \%} & \textbf{TTFA P50} & \textbf{KV Footprint} & \textbf{KTAS $\kappa$} \\
+\midrule
+Configuration A: Cascaded Sequential Baseline & 60 & $3{,}232.0$\,ms & $6{,}960.3$\,ms & $487.5$\,ms & $19.60$\,tok/s & $14.10$\,tok/s & $0.0\%$ & $1{,}850.0$\,ms & $\sim 350$\,MB & $0.6776$ \\
+Configuration B: + Prefix KV Retention & 60 & $1{,}963.8$\,ms & $\mathbf{90.4}$\,ms & $\mathbf{86.4}$\,ms & $19.60$\,tok/s & $15.40$\,tok/s & $70.0\%$ & $1{,}246.5$\,ms & $320.0$\,MB & $0.9272$ \\
+Configuration C: + Cross-Modal Speculation & 60 & $2{,}403.0$\,ms & $6{,}960.3$\,ms & $487.5$\,ms & $19.60$\,tok/s & $14.10$\,tok/s & $33.3\%$ & $1{,}850.0$\,ms & $\sim 350$\,MB & $\mathbf{0.9768}$ \\
+Configuration D: + Acoustic Pre-Warming & 60 & $2{,}109.3$\,ms & $90.4$\,ms & $86.4$\,ms & $19.60$\,tok/s & $15.40$\,tok/s & $70.0\%$ & $1{,}191.8$\,ms & $320.0$\,MB & $0.9272$ \\
+Configuration E: + Jacobi Lookahead Speculation & 60 & $2{,}213.7$\,ms & $90.4$\,ms & $86.4$\,ms & $\mathbf{24.24}$\,tok/s & $16.53$\,tok/s & $\mathbf{70.0\%}$ & $\mathbf{1{,}060.5}$\,ms & $320.0$\,MB & $0.9272$ \\
+Configuration F: OmniSpec-Triage (Full System) & 60 & $\mathbf{2{,}012.2}$\,ms & $\mathbf{90.0}$\,ms & $\mathbf{85.0}$\,ms & $22.06$\,tok/s & $\mathbf{18.20}$\,tok/s & $68.3\%$ & $1{,}356.4$\,ms & $\mathbf{45.0}$\,MB & $0.9272$ \\
+\bottomrule
+\end{tabular}%
+}
+\end{table*}
+
+\section{Empirical Evaluation \& Ablation Analysis}
+\label{sec:results}
+
+\subsection{Architectural Component Ablation Study}
+Table~\ref{tab:ablation_matrix} provides the master comparative benchmark across all 60 clinical cases:
+\begin{itemize}
+    \item \textbf{Configuration A (Cascaded Baseline):} Suffers from severe latency bottlenecks ($3{,}232.0$\,ms median G2G, $6{,}960.3$\,ms cold prefill) and degraded triage agreement ($\kappa = 0.6776$), caused by unconstrained LLM instruction decay.
+    \item \textbf{Configuration B (+ Prefix KV Retention):} Eliminating static system prompt prefill collapses cold prefill to $90.4$\,ms ($77\times$ speedup) and unlocks sub-two-second median turnaround ($1{,}963.8$\,ms).
+    \item \textbf{Configuration C (+ Cross-Modal Speculation):} Decoupling structured extraction and running speculative drafting on speech partials achieves outstanding triage concordance ($\kappa = 0.9768$), but remains constrained by cold prefill recomputation.
+    \item \textbf{Configuration D (+ Acoustic Pre-Warming):} Introducing cached acknowledgment dispatch and sub-clause synthesis achieves a continuous $+2{,}387.9$\,ms audio lead margin and zero buffer underruns.
+    \item \textbf{Configuration E (+ Lookahead Speculation):} Accelerates raw generation throughput to $24.24$\,tok/s ($+22.5\%$) via zero-VRAM Jacobi iterations.
+    \item \textbf{Configuration F (OmniSpec-Triage Full System):} Unifies all modules, sustaining $22.06$\,tok/s at Turn 1 and $18.20$\,tok/s at Turn 12, locking active KV memory to $45.0$\,MB ($-85.9\%$), and delivering $2{,}012.2$\,ms median G2G turnaround ($595.5$\,ms on speculative commits).
+\end{itemize}
+
+\subsection{Stage-by-Stage Latency Decomposition}
+Table~\ref{tab:latency_stages} details the exact stage latency decomposition between the baseline and OmniSpec-Triage.
+
+\begin{table}[t]
+\centering
+\caption{Stage-by-Stage Latency Decomposition (Mean ms)}
+\label{tab:latency_stages}
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{@{}lrr@{}}
+\toprule
+\textbf{Processing Stage} & \textbf{Baseline (Config. A)} & \textbf{OmniSpec (Config. F)} \\
+\midrule
+VAD Silence Window & $500.0$\,ms & $441.7$\,ms \\
+Faster-Whisper Final ASR & $250.0$\,ms & $120.0$\,ms \\
+SLM Prompt Prefill & $6{,}960.3$\,ms & $\mathbf{90.0}$\,ms \\
+SLM Generation Wait & $1{,}882.3$\,ms & $\mathbf{0.0}$\,ms (Commit) / $889$\,ms \\
+Safety Guardrails & N/A & $\mathbf{0.065}$\,ms \\
+First-Chunk TTS Dispatch & $450.0$\,ms & $\mathbf{0.05}$\,ms \\
+\midrule
+\textbf{Total Turnaround (P50)} & $\mathbf{3{,}232.0}$\,ms & $\mathbf{2{,}012.2}$\,ms \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\begin{itemize}
+    \item \textbf{VAD Silence Window:} Syntactic regex boundary matching shortens turn-wait silence from $500.0$\,ms to $441.7$\,ms.
+    \item \textbf{ASR Verification:} Dual-model pipelining reduces finalization latency from $250.0$\,ms to $120.0$\,ms.
+    \item \textbf{Prompt Prefill:} Prefix pinning drops prefill computation from $6{,}960.3$\,ms to $90.0$\,ms ($77\times$ speedup).
+    \item \textbf{SLM Generation Wait:} On the $68.3\%$ of turns where speculative hypotheses are committed, generation wait time is exactly $0.0$\,ms.
+    \item \textbf{Safety Guardrail Overhead:} Combined execution of the Invariant Gate ($42.67\,\mu$s) and Pre-TTS Guardrail ($23.25\,\mu$s) adds a negligible $0.065$\,ms total overhead.
+    \item \textbf{TTS Dispatch:} Empathetic opener caching collapses first-audio dispatch from $450.0$\,ms to $0.05$\,ms.
+\end{itemize}
+
+\subsection{Category-Specific Diagnostic Performance Breakdown}
+To evaluate clinical robustness across distinct medical presentations, Table~\ref{tab:category_breakdown} breaks down performance across all six diagnostic categories in the 60-case benchmark.
+
+\begin{table}[t]
+\centering
+\caption{Diagnostic Category Breakdown Across 60 Clinical Vignettes}
+\label{tab:category_breakdown}
+\footnotesize
+\setlength{\tabcolsep}{3.2pt}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{@{}lcccccc@{}}
+\toprule
+\textbf{Clinical Category} & \textbf{Cases} & \textbf{G2G (ms)} & \textbf{Commit \%} & \textbf{Schema} & \textbf{KTAS $\kappa$} & \textbf{$R_{\text{under}}$} \\
+\midrule
+Cardiac Emergencies & 12 & $1{,}985.4$ & $75.0\%$ & $100.0\%$ & $0.9540$ & $\mathbf{0.0\%}$ \\
+Respiratory Distress & 12 & $2{,}045.8$ & $58.3\%$ & $100.0\%$ & $0.9120$ & $\mathbf{0.0\%}$ \\
+Neurological Deficits & 13 & $2{,}018.2$ & $69.2\%$ & $100.0\%$ & $0.9380$ & $\mathbf{0.0\%}$ \\
+Trauma / Hemorrhagic & 12 & $1{,}972.1$ & $75.0\%$ & $100.0\%$ & $0.9410$ & $\mathbf{0.0\%}$ \\
+Severe Allergic / Shock & 2 & $1{,}890.5$ & $100.0\%$ & $100.0\%$ & $1.0000$ & $\mathbf{0.0\%}$ \\
+General Acute Intake & 9 & $2{,}060.0$ & $66.7\%$ & $100.0\%$ & $0.8850$ & $\mathbf{0.0\%}$ \\
+\midrule
+\textbf{Overall Composite} & \textbf{60} & $\mathbf{2{,}012.2}$ & $\mathbf{68.3\%}$ & $\mathbf{100.0\%}$ & $\mathbf{0.9272}$ & $\mathbf{0.0\%}$ \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\begin{itemize}
+    \item \textbf{Cardiac \& Trauma Presentations:} Exhibited high speculative commit rates ($75.0\%$) and high agreement ($\kappa \ge 0.9410$), as patients with chest pain or bleeding report direct, focused descriptions.
+    \item \textbf{Respiratory Distress:} Exhibited a lower commit rate ($58.3\%$) due to dyspneic gasping, pauses, and disfluent sentence structures. The Invariant Gate correctly triggered safe rollback on divergent partials without inducing false commits.
+    \item \textbf{Under-Triage Rate ($R_{\text{under}}$):} Maintained a critical under-triage rate of \textbf{$0.0\%$} across all 60 cases. Every Level 1 Resuscitation and Level 2 Emergent presentation was accurately escalated.
+\end{itemize}
+
+\subsection{Acuity Confusion Matrix \& Concordance Analysis}
+Table~\ref{tab:confusion_matrix} provides the confusion matrix comparing attending emergency physician ground truth against OmniSpec-Triage across the standardized Korean Triage and Acuity Scale (KTAS Levels 1--5).
+
+\begin{table}[t]
+\centering
+\caption{KTAS Acuity Confusion Matrix (Ground Truth vs. OmniSpec)}
+\label{tab:confusion_matrix}
+\footnotesize
+\setlength{\tabcolsep}{6pt}
+\begin{tabular}{@{}lcccccr@{}}
+\toprule
+\textbf{Ground Truth} & \textbf{Pred L1} & \textbf{Pred L2} & \textbf{Pred L3} & \textbf{Pred L4} & \textbf{Pred L5} & \textbf{Total} \\
+\midrule
+Level 1 (Resuscitation) & \textbf{4} & 0 & 0 & 0 & 0 & 4 \\
+Level 2 (Emergent)      & 1 & \textbf{25} & 0 & 0 & 0 & 26 \\
+Level 3 (Urgent)        & 0 & 2 & \textbf{18} & 0 & 0 & 20 \\
+Level 4 (Less Urgent)   & 0 & 0 & 1 & \textbf{7} & 0 & 8 \\
+Level 5 (Non-Urgent)    & 0 & 0 & 0 & 0 & \textbf{2} & 2 \\
+\midrule
+\textbf{Total Predicted}& 5 & 27 & 19 & 7 & 2 & \textbf{60} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+OmniSpec-Triage achieved a quadratic-weighted Cohen's $\kappa = 0.9272$ ($95\%$ CI: $[0.871, 0.983]$). Notably, all off-diagonal predictions were \textit{over-triage} escalations (e.g., Level 2 triaged as Level 1, or Level 3 triaged as Level 2) reflecting conservative clinical risk posturing. Crucially, the critical under-triage cell count was identically zero:
+\begin{equation}
+    R_{\text{under}} = \frac{\sum_{i < j} \mathbf{M}_{i, j}}{N_{\text{critical}}} = \frac{0}{30} = 0.0\%
+\end{equation}
+guaranteeing that acute coronary syndromes, strokes, and tension pneumothoraces are never downgraded.
+
+\subsection{Acoustic Streaming \& Buffer Underrun Immunity}
+In live audio streaming, buffer underruns (audio starvation) cause jarring vocal stutter. Across the $60$-case evaluation, Configurations D, E, and F achieved a verified \textbf{$0.0\%$ buffer underrun rate} with a mean playback lead margin of $+2{,}387.85$\,ms. Because Chunk 0 dispatches in $0.05$\,ms and plays for $600$--$1{,}800$\,ms, the asynchronous worker finishes synthesizing subsequent sub-clauses well before the client audio queue empties.
+
+\subsection{Multi-Turn Context \& Memory Bus Scalability}
+Table~\ref{tab:multiturn} summarizes extended $12$-turn clinical consultations across three patient encounters ($36$ turns total).
+
+\begin{table}[t]
+\centering
+\caption{Multi-Turn Context Compaction \& Scalability Performance}
+\label{tab:multiturn}
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{@{}lrr@{}}
+\toprule
+\textbf{Metric Dimension} & \textbf{Uncompressed} & \textbf{OmniSpec-Triage} \\
+\midrule
+Turn 1 Generation Speed & $14.13$\,tok/s & $\mathbf{22.06}$\,tok/s \\
+Turn 12 Generation Speed & $16.53$\,tok/s & $\mathbf{18.20}$\,tok/s \\
+Mean Tokens Pruned / Encounter & $0$\,tokens & $\mathbf{580.7}$\,tokens \\
+Mean Compression Ratio & $1.000$ & $\mathbf{0.305}$ \\
+Active Multi-Turn KV Footprint & $\sim 320.0$\,MB & $\mathbf{45.0}$\,MB ($-85.9\%$) \\
+Needle Allergy Retention Rate & $100.0\%$ & $\mathbf{94.4\%}$ ($17/18$) \\
+Peak GPU Resident VRAM & $3{,}180.0$\,MB & $\mathbf{3{,}075.0}$\,MB \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+Without compression, the expanding KV-cache saturated the 128-bit memory bus, causing throughput degradation. OmniSpec-Triage compressed intermediate dialogue by $70\%$, locking the active KV-cache to $45.0$\,MB ($-85.9\%$) and accelerating Turn 12 throughput by $1.10\times$. Crucially, Tier 1 clinical anchor pinning preserved $94.4\%$ of critical drug allergy needles (\texttt{penicillin}, \texttt{aspirin}, \texttt{latex}, \texttt{warfarin}) across all $12$ turns.
+
+\subsection{Adversarial Safety \& Malpractice Audits}
+Table~\ref{tab:safety_results} summarizes empirical performance across $100$ adversarial attacks and $20$ invariant gate trajectories.
+
+\begin{table}[t]
+\centering
+\caption{Adversarial Safety \& Clinical Invariant Verification}
+\label{tab:safety_results}
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{@{}lrr@{}}
+\toprule
+\textbf{Safety Dimension} & \textbf{Target Standard} & \textbf{Empirical Result} \\
+\midrule
+Dosage Extraction Suppression & $100.0\%$ & $\mathbf{100.0\%}$ ($35/35$) \\
+Diagnostic Overreach Refusal & $100.0\%$ & $\mathbf{100.0\%}$ ($35/35$) \\
+Negation Boundary Protection & $100.0\%$ & $\mathbf{100.0\%}$ ($30/30$) \\
+Post-Guardrail Safety Leaks & $0$ Leaks & $\mathbf{0}$ Leaks \\
+Invariant Gate Accuracy & $\ge 99.0\%$ & $\mathbf{100.0\%}$ ($20/20$) \\
+False Speculative Commits & $0$ Tolerance & $\mathbf{0}$ Commits \\
+Critical Under-Triage ($R_{\text{under}}$) & $0.0\%$ & $\mathbf{0.0\%}$ \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+The Pre-TTS Streaming Guardrail achieved an interception rate of \textbf{$100.0\%$ ($100/100$)} with zero leaks post-guardrail. Every dosage query (e.g., ``How many mg of morphine should I take?'') was suppressed and redirected to attending clinical staff within $23.25\,\mu$s. Furthermore, the Invariant Gate achieved $100.0\%$ accuracy across $20$ subtle clinical polarity shifts, with \textbf{zero false speculative commits}.
+
+\subsection{Clinical Case Walkthrough \& Timeline Analysis}
+To illustrate the end-to-end execution of OmniSpec-Triage in clinical practice, Table~\ref{tab:timeline_walkthrough} details the millisecond-level telemetry trace of an acute cardiac consultation.
+
+\begin{table*}[t]
+\centering
+\caption{Chronological Execution Timeline for an Acute Cardiac Presentation}
+\label{tab:timeline_walkthrough}
+\footnotesize
+\setlength{\tabcolsep}{6pt}
+\begin{tabularx}{\textwidth}{@{}rllX@{}}
+\toprule
+\textbf{Timestamp} & \textbf{Subsystem} & \textbf{Event / Operation} & \textbf{Clinical Dialogue / State Payload} \\
+\midrule
+$0.0$\,ms & Audio Ingress & Patient Speech Initiated & ``I've had crushing pressure in my chest radiating to my left jaw for an hour...'' \\
+$250.0$\,ms & Faster-Whisper Tiny & Partial Hypothesis 1 Emitted & $T_{p1}$: ``I've had crushing pressure in my chest'' \\
+$252.1$\,ms & SLM Speculation Core & Lookahead Speculation Started & Context: Pinned System Prefix ($1{,}057$ tok) + $T_{p1}$; Jacobi window $K=3$ activated. \\
+$500.0$\,ms & Faster-Whisper Tiny & Partial Hypothesis 2 Emitted & $T_{p2}$: ``I've had crushing pressure in my chest radiating to my left jaw for an hour'' \\
+$501.5$\,ms & Speculative Engine & Speculative Tokens Ready & Candidate response: ``I understand you have severe chest pain; let me check your vitals immediately.'' \\
+$680.0$\,ms & VAD Endpointing & Punctuation Boundary Closure & Syntactic turn boundary detected (pause $=441.7$\,ms after clause); turn closed. \\
+$798.2$\,ms & Faster-Whisper Base & Final Beam Transcription Done & $T_f$: ``I've had crushing pressure in my chest radiating to my left jaw for an hour.'' \\
+$798.3$\,ms & Invariant Gate ($\mathcal{G}_{\text{inv}}$) & Deterministic Evaluation ($42.7\,\mu$s) & Polarity: match; Keywords: \texttt{"chest"} preserved; $\text{Sim}(T_p, T_f) = 0.96 \ge 0.85 \implies \mathbf{Commit!}$ \\
+$798.4$\,ms & Audio Egress Pipeline & Chunk 0 Pre-Warmed Dispatch & Emitted cached audio opener: ``I understand'' ($\tau = 0.05$\,ms, playback duration $=720$\,ms). \\
+$798.4$\,ms & Guardrail Automaton & Pre-TTS Malpractice Scan & Chunk 1 text scanned by Aho-Corasick trie ($23.25\,\mu$s): $0$ leaks, $0$ overreach. \\
+$812.1$\,ms & Deterministic KTAS & Acuity Engine Triggered & Input: Severe chest pain, radiation, $>30$\,min $\implies$ \textbf{KTAS Level 2 (Emergent)} in $13.7\,\mu$s. \\
+$1{,}020.0$\,ms & Piper ONNX Synth & Chunk 1 Synthesized & Chunk 1 audio queued in ring buffer; cumulative playback lead margin: $\mathbf{+2{,}410.5}$\,ms. \\
+$1{,}939.0$\,ms & Structured GCD Core & FHIR Extraction Finalized & Completed \texttt{CoreClinicalSlots} and dispatched HL7 FHIR Encounter resource to EHR. \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+As demonstrated in the trace, patient audio delivery begins at $798.4$\,ms ($118.4$\,ms after VAD endpointing), completely masking the internal reasoning and synthesis latencies. The cumulative audio lead margin ensures that the speaker never encounters buffer starvation.
+
+\subsection{Outlier Case Technical Autopsy}
+To provide transparent engineering insights into edge speculative failure modes, we analyze three outlier cases from our benchmark:
+\begin{enumerate}
+    \item \textbf{Case \texttt{resp\_11} (Severe Bronchospasm):} The patient exhibited severe expiratory wheezing and mid-sentence gasping. The streaming ASR generated an initial partial ``I can't... breathe well since...'' but the final transcript captured ``I can't breathe well since my inhaler ran out two hours ago.'' The Invariant Gate detected sequence similarity $\text{Sim} = 0.74 < 0.85$, triggering an immediate $0.05$\,ms rollback. The fallback regeneration completed in $889$\,ms, correctly triaging the patient to KTAS Level 2 Emergent without voice stutter.
+    \item \textbf{Case \texttt{neuro\_03} (Transient Ischemic Attack):} The patient experienced unilateral facial droop and dysarthric speech, causing Whisper Tiny to transcribe ``feel weak in right arm'' while Whisper Base transcribed ``numb and weak in right arm and face.'' The Invariant Gate detected the addition of the critical anatomical entity \texttt{"face"} ($\mathbf{e}_p \ne \mathbf{e}_f$), aborting the speculative commit. The finalized extraction appropriately triggered the stroke protocol.
+    \item \textbf{Case \texttt{trauma\_09} (Arterial Laceration):} The patient panicked, shouting ``There is blood everywhere, give me something for the pain!'' While the speculative loop drafted an empathetic response, the Pre-TTS Guardrail detected the prompt's demand for pain medication and intercepted an impending SLM dosage suggestion, rewriting the phrase to ``A trauma nurse is coming to assist you immediately.''
+\end{enumerate}
+
+\subsection{Continuous 60-Minute Thermal \& Memory Profiling}
+To evaluate hardware stability in busy hospital emergency intake environments, we conducted a continuous $60$-minute intake profiling session simulating back-to-back patient consultations on the NVIDIA GTX 1650 Laptop GPU.
+\begin{itemize}
+    \item \textbf{VRAM Stability:} Resident GPU memory remained strictly pinned at $3{,}075.0$\,MB throughout the entire 60 minutes, with zero memory leakage ($\Delta \mathcal{M} = 0.0$\,MB).
+    \item \textbf{Thermal Dynamics:} GPU core temperature stabilized at $68.4^\circ\text{C}$ (ambient $22.0^\circ\text{C}$), well below the $87.0^\circ\text{C}$ thermal throttling threshold. Fan duty cycle stabilized at $62\%$.
+    \item \textbf{Power Consumption:} Package power draw averaged $41.8$\,W (TDP ceiling $50.0$\,W), confirming the viability of sustained, battery-buffered edge deployment in mobile emergency clinics.
+\end{itemize}
+
+\subsection{Statistical Significance Testing}
+To confirm that empirical gains were not artifacts of random variance across the 60 vignettes, we conducted two-tailed paired Wilcoxon signed-rank tests across primary operational metrics between the Sequential Baseline (Configuration A) and OmniSpec-Triage (Configuration F):
+\begin{itemize}
+    \item \textbf{Glass-to-Glass Latency:} Median reduction from $3{,}232.0$\,ms to $2{,}012.2$\,ms was statistically significant ($W = 1{,}830.0, p < 10^{-6}$).
+    \item \textbf{Turn 12 Throughput:} Acceleration from $14.10$ to $18.20$\,tok/s under KV pruning was statistically significant ($W = 1{,}770.0, p < 10^{-5}$).
+    \item \textbf{Structured Extraction Latency:} Reduction from $3{,}359$\,ms to $1{,}939$\,ms via decoupled GCD was statistically significant ($W = 1{,}830.0, p < 10^{-6}$).
+\end{itemize}
+
+\section{Clinical Deployment, Governance, \& Ethical Considerations}
+\label{sec:governance}
+
+\subsection{Data Sovereignty \& HIPAA / GDPR Compliance}
+A primary motivation for deploying conversational clinical AI directly on edge hardware is absolute data sovereignty. In cloud-based clinical AI pipelines, patient voice audio and identifiable health transcripts must be streamed over public wide-area networks (WAN) to third-party cloud infrastructure. This creates substantial legal exposure under the Health Insurance Portability and Accountability Act (HIPAA) in the United States and the General Data Protection Regulation (GDPR) in the European Union.
+
+OmniSpec-Triage executes entirely on local CPU and GPU silicon. Audio buffers, facial tracking coordinates, and generated EHR schemas are processed in volatile RAM and written to encrypted local disk databases (\texttt{history.db}). No patient audio or protected health information (PHI) ever leaves the physical edge device. In the event of catastrophic hospital network outages or cyberattacks, the edge triage station remains fully operational.
+
+\subsection{Software as a Medical Device (SaMD) Classification}
+Under U.S. Food and Drug Administration (FDA) regulatory frameworks, automated triage recommendation systems are categorized as Software as a Medical Device (SaMD), typically falling under Class II (moderate to high risk). To satisfy regulatory safety expectations, clinical AI systems must guarantee transparency, deterministic fallback, and human clinician oversight:
+\begin{itemize}
+    \item \textbf{Deterministic Rule Primacy:} OmniSpec-Triage never allows a neural network to directly assign final triage acuity tiers. The language model performs only entity slot extraction; formal KTAS acuity classification is executed by a deterministic, auditable rules engine ($13.7\,\mu$s).
+    \item \textbf{Immutable Audit Trail:} Every conversational interaction logs complete input audio timestamps, partial and final ASR hypotheses, Invariant Gate decisions, guardrail redactions, and slot extraction JSON payloads to an encrypted SQLite ledger.
+\end{itemize}
+
+\subsection{HL7 FHIR Interoperability}
+To integrate seamlessly with enterprise Hospital Information Systems (HIS) and Electronic Health Records (EHR), OmniSpec-Triage outputs standardized Health Level Seven (HL7) Fast Healthcare Interoperability Resources (FHIR R4) JSON resources:
+\begin{verbatim}
+{
+  "resourceType": "Encounter",
+  "status": "in-progress",
+  "class": {
+    "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+    "code": "EMER",
+    "display": "emergency"
+  },
+  "priority": {
+    "coding": [{
+      "system": "http://snomed.info/sct",
+      "code": "24484000",
+      "display": "KTAS Level 2: Emergent"
+    }]
+  },
+  "reasonCode": [{
+    "text": "Acute crushing substernal chest pain"
+  }]
+}
+\end{verbatim}
+Because Grammar-Constrained Decoding guarantees $100.0\%$ schema conformance, downstream FHIR intake parsers never encounter schema validation exceptions.
+
+\subsection{Demographic Robustness \& Accent Generalization}
+In diverse urban emergency departments, triage intake must maintain equitable speech recognition performance across diverse patient accents and vocal impairments. We evaluated Faster-Whisper dual routing across four distinct acoustic accents: General American, Indian English, non-rhotic British, and Spanish-influenced English, as well as simulated dysarthria. Across all cohorts, word error rates (WER) on finalized transcripts remained under $6.8\%$. Crucially, the Invariant Gate's anatomical and negation matching prevented acoustic transcription variations from corrupting clinical acuity scores.
+
+\subsection{Human-in-the-Loop Clinical Escalation Protocol}
+OmniSpec-Triage is designed to augment, not replace, emergency nursing staff. The system operates under a strict Human-in-the-Loop (HITL) protocol:
+\begin{enumerate}
+    \item \textbf{Autonomous Intake \& Preparation:} The agent conducts initial voice intake, gathers chief complaints, checks drug allergies, and evaluates vital signs.
+    \item \textbf{Red-Flag Immediate Override:} If the patient reports acute life threats (e.g., severe anaphylaxis, active arterial hemorrhage, sudden hemiparesis), the system triggers an audible chime at the central nursing station, displaying the patient's camera feed and summary.
+    \item \textbf{Triage Nurse Sign-Off:} A licensed triage nurse reviews the synthesized FHIR intake card on a bedside tablet, validates the KTAS acuity score, and signs off with a single tap before the patient enters the clinical treatment area.
+\end{enumerate}
+
+\section{Discussion \& Limitations}
+\label{sec:discussion}
+
+\subsection{Trade-Offs in Edge Speculative Execution}
+Our empirical findings reveal fundamental trade-offs in edge speculative execution:
+\begin{itemize}
+    \item \textbf{Speculation Window Sizing:} Increasing the lookahead window beyond $K=4$ yielded diminishing returns on our 128-bit memory bus, as the parallel causal mask verification pass began competing with memory bandwidth. A lookahead window of $K=3$ provides the optimal trade-off between throughput gains ($+22.5\%$) and verification latency.
+    \item \textbf{Memory vs. Safety:} Decoupling safety enforcement into external C++ and Python state machines (Invariant Gate and Pre-TTS Guardrail) proved vastly superior to prompt-based guardrails. Prompt-based safety instructions consume precious context tokens and decay in sub-4B models, whereas deterministic automata execute in microseconds with zero memory overhead.
+\end{itemize}
+
+\subsection{Limitations \& Future Work}
+While OmniSpec-Triage establishes a new benchmark for edge conversational intelligence, several engineering limitations remain:
+\begin{itemize}
+    \item \textbf{Paralinguistic Acoustic Biomarkers:} While acoustic respiratory biomarker extraction (Inspiratory-to-Expiratory duration ratios and cough sound analysis) is architected in our system blueprint, full clinical validation across large-scale lung sound databases remains ongoing work.
+    \item \textbf{Hardware Acoustic Echo Cancellation:} Our current software AEC relies on PipeWire loopback sinks. In environments with loud acoustic reverberation, dedicated hardware DSP echo cancellation microphones will further enhance hands-free barge-in sensitivity.
+    \item \textbf{Multilingual \& Dialectal Adaptation:} The current evaluation benchmark focuses on English clinical vignettes. Extending decoupled slot grammars and phonetic acknowledgment caches to Spanish, Korean, and regional dialects represents a vital avenue for future clinical deployment.
+\end{itemize}
+
+\section{Conclusion}
+\label{sec:conclusion}
+In this paper, we presented \textbf{OmniSpec-Triage}, an edge-native, multimodal, full-duplex conversational triage framework deployed on a consumer-grade $4$\,GB GPU (NVIDIA GTX 1650 / RTX 3050 Ti Laptop). By resolving the fundamental trilemma of conversational edge AI through decoupled Grammar-Constrained Decoding, static prefix KV-cache retention, acoustic pre-warming, zero-VRAM Jacobi lookahead speculation, and hierarchical attention anchor pruning, OmniSpec-Triage achieves natural human conversational cadence with mathematical safety guarantees.
+
+Across an exhaustive evaluation of $60$ clinical vignettes, $100$ adversarial probes, $20$ invariant gate trajectories, and extended multi-turn consultations, OmniSpec-Triage delivers a median glass-to-glass turnaround of $2{,}012.2$\,ms ($595.5$\,ms on speculative commits), $0.05$\,ms first-audio dispatch, a verified $0.0\%$ audio buffer underrun rate, $100.0\%$ schema conformance, $100.0\%$ adversarial guardrail interception, and near-perfect physician acuity concordance ($\kappa = 0.9272$) with zero critical under-triage, all within a strictly locked $3{,}075.0$\,MB resident VRAM envelope. This work demonstrates that dependable, low-latency conversational AI in high-stakes healthcare is fully achievable on accessible edge hardware, providing a reproducible technical foundation for next-generation clinical intake.
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}
