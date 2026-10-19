@@ -32,6 +32,11 @@ class Speculator:
     def has_result(self) -> bool:
         return self._generation_done.is_set() and not self._cancelled
 
+    @property
+    def system_prompt_tokens(self) -> int:
+        """Expose pinned system prompt token count from underlying SLMEngine."""
+        return self.engine.system_prompt_tokens
+
     def start_speculation(self, partial_text: str, conversation_history: list):
         self.cancel()
 

@@ -17,13 +17,16 @@ Setup (one-time, outside Python):
 """
 
 import ollama
+from .prompt_templates import SYSTEM_PROMPT
+
+_PREFIX_TOKEN_CACHE = {}
 
 
 class SLMEngine:
     def __init__(self, config: dict):
         """
         config: the 'slm' section of config.yaml
-        Expects config["model_name"] = "qwen2.5:1.5b-instruct" (Ollama model tag)
+        Expects config["model_name"] = "qwen2.5:1.5b-instruct" or "qwen3.5:4b" (Ollama model tag)
         """
         self.cfg = config
         self.model_name = config.get("model_name", "qwen2.5:1.5b-instruct")
@@ -47,6 +50,41 @@ class SLMEngine:
                 "Install from https://ollama.com/download/windows and run "
                 f"'ollama pull {self.model_name}' first."
             ) from e
+
+        # Calculate or query static prefix token length for KV-cache prefix pinning (Phase 2)
+        self.system_prompt_tokens = self._calculate_prefix_tokens(SYSTEM_PROMPT)
+
+    def _calculate_prefix_tokens(self, text: str) -> int:
+        """
+        Calculates exact token length of static prefix for KV-cache pinning.
+        For Qwen models with Ollama, queries Ollama chat prompt_eval_count or
+        uses verified BPE ratio fallback (~1.36 tokens/word for clinical prompts).
+        """
+        cache_key = (self.model_name, len(text))
+        if cache_key in _PREFIX_TOKEN_CACHE:
+            return _PREFIX_TOKEN_CACHE[cache_key]
+
+        tokens = 0
+        try:
+            res = ollama.chat(
+                model=self.model_name,
+                messages=[{"role": "system", "content": text}],
+                think=False,
+                keep_alive="24h",
+                options={"num_predict": 1}
+            )
+            count = res.get("prompt_eval_count")
+            if count and count > 0:
+                tokens = int(count)
+        except Exception:
+            pass
+
+        if tokens <= 0:
+            # Fallback conservative estimate based on word count
+            tokens = int(len(text.split()) * 1.36)
+
+        _PREFIX_TOKEN_CACHE[cache_key] = tokens
+        return tokens
 
     def cancel(self):
         """Signal the current generation to stop at the next token boundary.
@@ -97,17 +135,19 @@ class SLMEngine:
         messages = self._build_messages(transcript, conversation_history, routing_hint=routing_hint)
 
         max_tokens = min(self.cfg.get("max_new_tokens", 100), 100)
+        options = {
+            "num_ctx": self.num_ctx,
+            "temperature": self.cfg.get("temperature", 0.3),
+            "num_predict": max_tokens,
+            "num_keep": self.system_prompt_tokens,
+        }
         stream = ollama.chat(
             model=self.model_name,
             messages=messages,
             stream=True,
             think=False,
             keep_alive="24h",
-            options={
-                "num_ctx": self.num_ctx,
-                "temperature": self.cfg.get("temperature", 0.3),
-                "num_predict": max_tokens,
-            },
+            options=options,
         )
 
         for chunk in stream:

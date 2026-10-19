@@ -186,18 +186,26 @@ def initialize_engines():
     slm_engine = SLMEngine(slm_cfg)
     speculator = Speculator(slm_cfg)
     
-    # Pre-warm model into GPU memory with keep_alive='24h' to eliminate cold-start load time
+    # Pre-warm model into GPU memory with keep_alive='24h' and pin static system prompt prefix (Phase 2)
     try:
         import ollama
-        log.info("Pre-warming SLM into GPU VRAM (pinning keep_alive='24h')...")
+        from src.slm.prompt_templates import SYSTEM_PROMPT
+        log.info("Pre-warming SLM into GPU VRAM (pinning system prompt with num_keep)...")
         ollama.chat(
             model=slm_cfg.get('model_name', 'qwen3.5:4b'),
-            messages=[{"role": "user", "content": "hi"}],
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": "hello"}
+            ],
             keep_alive="24h",
             think=False,
-            options={"num_ctx": slm_cfg.get("num_ctx", 3072), "num_predict": 1}
+            options={
+                "num_ctx": slm_cfg.get("num_ctx", 3072),
+                "num_predict": 1,
+                "num_keep": slm_engine.system_prompt_tokens,  # ⚡ Pinned on boot
+            }
         )
-        log.info("SLM successfully pre-warmed and pinned in VRAM!")
+        log.info(f"SLM system prompt prefix ({slm_engine.system_prompt_tokens} tokens) successfully pinned in GPU KV-cache!")
     except Exception as e:
         log.warning(f"Could not pre-warm SLM: {e}")
     
