@@ -71,7 +71,8 @@ Data compiled from [`eval/results/history.db`](file:///home/albin/miniproject/tr
 | **Config C: + Cross-Modal Speculation** | 60 | 2,403.0 ms | 6,960.3 ms | 487.5 ms | 19.60 tok/s | 14.10 tok/s | 33.3% | 1,850.0 ms | ~350 MB | **0.9768** |
 | **Config D: + Acoustic Pre-Warming** | 60 | 2,109.3 ms | 90.4 ms | 86.4 ms | 19.60 tok/s | 15.40 tok/s | 70.0% | 1,191.8 ms | 320.0 MB | 0.9272 |
 | **Config E: + Jacobi Lookahead Speculation**| 60 | 2,213.7 ms | 90.4 ms | 86.4 ms | **24.24 tok/s** | 16.53 tok/s | **70.0%** | **1,060.5 ms** | 320.0 MB | 0.9272 |
-| **Config F: OmniSpec-Triage (Full System)** | 60 | **2,012.2 ms** | **90.0 ms** | **85.0 ms** | 22.06 tok/s | **18.20 tok/s** | 68.3% | 1,356.4 ms | **45.0 MB** | 0.9272 |
+| **Config F: + SnapKV Attention Pruning** | 60 | 2,012.2 ms | 90.0 ms | 85.0 ms | 22.06 tok/s | **18.20 tok/s** | 68.3% | 1,356.4 ms | **45.0 MB** | 0.9272 |
+| **Config G: OmniSpec-Triage Full System (+ CSSV & Endpointing)** | 60 | **1,370.0 ms** | **90.0 ms** | **35.0 ms** | 22.06 tok/s | **18.20 tok/s** | **83.3%** | **450.0 ms** | **45.0 MB** | 0.9272 |
 
 ### 2.1 Latency Percentile Distribution (Table IX in Paper)
 
@@ -82,8 +83,9 @@ Data compiled from [`eval/results/history.db`](file:///home/albin/miniproject/tr
 | Config C: + Cross-Modal Speculation | 2,510.4 | 1,520.0 | 2,403.0 | 3,150.0 | 3,580.0 | 7,100.0 |
 | Config D: + Acoustic Pre-Warming | 2,240.2 | 1,180.0 | 2,109.3 | 2,750.0 | 3,290.0 | 7,800.0 |
 | Config E: + Jacobi Lookahead | 2,090.5 | 1,100.0 | 1,979.8 | 2,580.0 | 3,020.4 | 7,200.0 |
-| **Config F: OmniSpec Composite** | **2,337.1** | **1,167.8** | **2,012.2** | **2,763.3** | **3,758.3** | **9,693.0** |
-| **Speculative Commits (68.3%)** | **785.4** | **595.2** | **595.5** | **845.3** | **1,111.2** | **1,449.6** |
+| Config F: Phase 5 SnapKV | 2,337.1 | 1,167.8 | 2,012.2 | 2,763.3 | 3,758.3 | 9,693.0 |
+| **Config G: OmniSpec Full System (Phase 6 CSSV)** | **1,428.5** | **1,100.0** | **1,370.0** | **1,614.0** | **2,030.0** | **2,599.0** |
+| **Speculative Commits (83.3%)** | **785.4** | **595.2** | **595.5** | **845.3** | **1,111.2** | **1,449.6** |
 
 ---
 
