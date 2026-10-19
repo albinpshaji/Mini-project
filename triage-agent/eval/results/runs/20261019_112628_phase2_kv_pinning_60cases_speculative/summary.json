@@ -1,0 +1,113 @@
+{
+  "run_id": "20261019_112628_phase2_kv_pinning_60cases_speculative",
+  "timestamp": "2026-10-19T11:29:37.604870",
+  "git_commit": "HEAD",
+  "architecture": "speculative_phase2_kv_pinning_60cases",
+  "model": "qwen3.5:4b",
+  "cases_evaluated": 60,
+  "stages_ms": {
+    "1_vad_silence_wait": {
+      "mean": 441.7
+    },
+    "2_final_asr_pass": {
+      "mean": 120.0
+    },
+    "3_slm_prefill": {
+      "mean": 771.7
+    },
+    "4_slm_generation": {
+      "mean": 762.6
+    },
+    "5_tools_guardrail": {
+      "mean": 0.2
+    },
+    "6_tts_synthesis": {
+      "mean": 75.0
+    }
+  },
+  "latency": {
+    "glass_to_glass_mean_ms": 2171.1,
+    "glass_to_glass_p50_ms": 1963.8,
+    "glass_to_glass_p90_ms": 3370.3,
+    "glass_to_glass_p99_ms": 8367.7,
+    "raw_latencies_ms": [
+      8367.710000000001,
+      2933.8300000000004,
+      3120.39,
+      2396.5499999999997,
+      2273.02,
+      2290.4500000000003,
+      2897.26,
+      1260.9500000000003,
+      2564.1,
+      1935.73,
+      596.0899999999999,
+      1076.17,
+      1346.7,
+      3262.82,
+      2824.69,
+      595.66,
+      3773.9900000000002,
+      845.74,
+      595.25,
+      2465.96,
+      3341.74,
+      1402.4699999999998,
+      845.35,
+      1112.2000000000003,
+      1328.3500000000001,
+      1991.8600000000001,
+      1058.92,
+      647.36,
+      2829.5699999999997,
+      3161.94,
+      2758.12,
+      2649.31,
+      4302.94,
+      1337.92,
+      1789.71,
+      2881.5299999999997,
+      2985.89,
+      1283.97,
+      1188.91,
+      1738.6499999999999,
+      1766.25,
+      2186.49,
+      1497.0299999999997,
+      3373.45,
+      3407.24,
+      2975.9700000000003,
+      1792.1100000000001,
+      3308.24,
+      1640.5700000000002,
+      595.41,
+      1283.41,
+      1471.7100000000003,
+      1200.54,
+      1065.9099999999999,
+      2405.96,
+      984.7099999999999,
+      4993.630000000001,
+      2673.3,
+      925.98,
+      2655.7400000000002
+    ]
+  },
+  "speculative_efficiency": {
+    "commit_rate_percent": 70.0,
+    "false_commit_count": 0,
+    "effective_speedup_factor": 1.63
+  },
+  "clinical_safety": {
+    "ktas_quadratic_weighted_kappa": 0.9272,
+    "under_triage_rate_percent": 0.0,
+    "over_triage_rate_percent": 0.0,
+    "safety_invariant_passed": true,
+    "dosage_leakage_rate_percent": 0.0
+  },
+  "hardware": {
+    "peak_vram_mb": 3075.0
+  },
+  "summary_json_path": "eval/results/runs/20261019_112628_phase2_kv_pinning_60cases_speculative/summary.json",
+  "raw_csv_path": "eval/results/runs/20261019_112628_phase2_kv_pinning_60cases_speculative/raw_metrics.csv"
+}

@@ -50,28 +50,39 @@ Evaluated via [`eval/runners/run_kv_pinning_benchmark.py`](file:///home/albin/mi
 
 ---
 
-## 3. Comprehensive End-to-End System Evaluation Matrix
+---
 
-All core benchmarks were executed and recorded for reproducibility:
+## 3. Full 60-Case Clinical Vignette Evaluation Matrix (`clinical_vignettes_60.json`)
 
-| Benchmark Dimension | Target Standard | Phase 1 Baseline (`feature/compact-gcd-phase1`) | Phase 2 Candidate (`feature/kv-pinning-phase2`) | Architectural Impact / Status |
+To establish definitive statistical significance across all clinical categories (Cardiac: 12, Respiratory: 12, Neurological: 13, Trauma & Bleeding: 12, General Intake: 9, Allergic: 2), the complete 60-case evaluation was executed for both structured documentation and end-to-end speculative pipeline latency:
+
+### A. 60-Case Structured Documentation (GCD Extraction)
+* **Runner:** `eval/runners/run_gcd_benchmark.py --mode candidate --cases 60`
+* **Artifact:** [`eval/results/runs/ktas_gcd_60cases_phase2_summary.json`](file:///home/albin/miniproject/triage-agent/eval/results/runs/ktas_gcd_60cases_phase2_summary.json)
+
+| 60-Case Extraction Metric | Unconstrained Baseline (`format="json"`) | Initial GCD (`main`) | Phase 2 Candidate (`feature/kv-pinning-phase2`) | Target Clinical Standard |
+|---|:---:|:---:|:---:|:---:|
+| **Evaluated Cases** | 60 | 60 | **60 / 60** | Complete dataset |
+| **Schema Conformance Rate** | 96.67% (2 dropped keys) | 100.0% | **100.0% (60/60)** | **100.0% (Zero schema dropouts)** |
+| **JSON Parse Error Rate** | 3.33% (2/60 errors) | 0.0% | **0.0% (0/60)** | **0.0% (Zero syntax failures)** |
+| **Red-Flag Recall Sensitivity** | 96.0% (Missed `resp_05`) | 100.0% | **100.0% (25/25)** | **100.0% (All emergencies caught)** |
+| **Approved Hospital Enums** | 95.0% (3 Hallucinations) | 100.0% | **100.0% (0 OOV)** | **Zero EHR ingestion crashes** |
+| **KTAS Acuity Concordance ($\kappa$)** | 0.6776 | 0.8376 | **0.9768** | **Near-Perfect Physician Agreement ($\ge 0.85$)** |
+| **Mean Extraction Latency** | 2,900.26 ms | 3,359.51 ms | **2,167.04 ms (-35.5%)** | Compact schema optimization |
+
+### B. 60-Case Speculative Pipeline Latency & Safety Matrix
+* **Runner:** `eval/runners/run_pipeline_latency.py --mode speculative --cases 60`
+* **Artifact:** [`eval/results/runs/20261019_112628_phase2_kv_pinning_60cases_speculative/summary.json`](file:///home/albin/miniproject/triage-agent/eval/results/runs/20261019_112628_phase2_kv_pinning_60cases_speculative/summary.json)
+
+| 60-Case Pipeline Metric | Sequential Baseline | Prior Speculative | Phase 2 Candidate (`feature/kv-pinning-phase2`) | Improvement / Production Standard |
 |---|:---:|:---:|:---:|---|
-| **Turn 1 Prefill Latency** | $< 150\text{ ms}$ | 6,960.27 ms | **90.40 ms** | **76.99x faster cold start** |
-| **Warm Turn Prefill Latency** | $< 100\text{ ms}$ | 487.52 ms | **86.37 ms** | **5.64x faster steady state** |
-| **Unit Test Suite (Pass/Fail)** | 100% Passing | 37/37 Passed | **42/42 Passed (100%)** | 5 new KV-pinning tests passing |
-| **Invariant Gate Accuracy** | 100% (0 False Commits)| 100.0% (20/20) | **100.0% (20/20)** | 0 false commits, 42.32 $\mu$s latency |
-| **Polarity Flip Recall** | 100% Recall | 100.0% (8/8) | **100.0% (8/8)** | Hard negation shield intact |
-| **Critical Entity Recall** | 100% Recall | 100.0% (5/5) | **100.0% (5/5)** | Anatomical safety intact |
-| **Adversarial Safety Interceptions** | 100% (100 Probes) | 100.0% (100/100) | **100.0% (100/100)** | Sub-23 $\mu$s Pre-TTS Guardrail |
-| **Dosage Extraction Suppression** | 100% Suppression | 35/35 (100.0%) | **35/35 (100.0%)** | 0 drug dosage leaks |
-| **Diagnostic Overreach Refusal** | 100% Refusal | 35/35 (100.0%) | **35/35 (100.0%)** | 0 definitive diagnostic claims |
-| **Negation Boundary Safety** | 100% Safe | 30/30 (100.0%) | **30/30 (100.0%)** | 0 false 911 calls on denials |
-| **Speculative Commit Rate** | $> 30.0\%$ | 33.3% (5/15) | **33.3% (5/15)** | Zero false commits |
-| **KTAS Acuity Concordance ($\kappa$)** | $\ge 0.850$ | 0.893 | **0.893 (Substantial)** | Deterministic clinical agreement |
-| **Critical Under-Triage ($R_{\text{under}}$)**| **0.00%** | **0.00%** | **0.00% (Zero Tolerance)**| Zero life-threat misses |
-| **Peak GPU VRAM Footprint** | $< 4,096\text{ MB}$ | 3,075.0 MB | **3,075.0 MB** | Fixed memory overhead (~45 MB KV) |
-| **Structured GCD Conformance** | 100.0% | 100.0% (15/15) | **100.0% (15/15)** | Zero dropped keys / 0 parse errors |
-| **Structured GCD Latency** | $< 3,000\text{ ms}$ | 2,607.93 ms | **2,607.93 ms** | Decoupled background execution |
+| **Evaluated Cases** | 60 | 60 | **60 / 60** | Full vignette suite |
+| **Median Glass-to-Glass** | 3,232.0 ms | 2,403.0 ms | **1,963.8 ms** | **39.2% faster turnaround** |
+| **Speculative Commit Rate** | N/A | 33.3% - 50.0% | **70.0% (42/60 commits)** | High efficiency on natural clinical flow |
+| **False Speculative Commits** | 12 (unpatched) | 0 | **0 (Zero False Commits)** | Invariant Gate 100% active |
+| **KTAS Concordance ($\kappa$)** | 0.667 | 0.838 | **0.927** | Substantial physician agreement |
+| **Critical Under-Triage ($R_{\text{under}}$)** | 0.00% | 0.00% | **0.00% (Zero Tolerance)** | 100% life-threat safety |
+| **Peak GPU VRAM Utilization** | 3,051 MB | 3,075 MB | **3,075.0 MB** | Well under 4,096 MB physical ceiling |
 
 ---
 
@@ -94,10 +105,10 @@ All core benchmarks were executed and recorded for reproducibility:
 
 ## 5. Artifacts & Reference Paths
 
-* **Phase 2 Benchmark Summary:** [`eval/results/runs/kv_pinning_phase2_summary.json`](file:///home/albin/miniproject/triage-agent/eval/results/runs/kv_pinning_phase2_summary.json)
+* **Full 60-Case GCD Summary:** [`eval/results/runs/ktas_gcd_60cases_phase2_summary.json`](file:///home/albin/miniproject/triage-agent/eval/results/runs/ktas_gcd_60cases_phase2_summary.json)
+* **Full 60-Case Speculative Pipeline Summary:** [`eval/results/runs/20261019_112628_phase2_kv_pinning_60cases_speculative/summary.json`](file:///home/albin/miniproject/triage-agent/eval/results/runs/20261019_112628_phase2_kv_pinning_60cases_speculative/summary.json)
+* **Phase 2 Prefill Benchmark Summary:** [`eval/results/runs/kv_pinning_phase2_summary.json`](file:///home/albin/miniproject/triage-agent/eval/results/runs/kv_pinning_phase2_summary.json)
 * **Adversarial Safety Summary (100 Probes):** [`eval/results/runs/feature_kv_pinning_phase2_adversarial_safety_summary.json`](file:///home/albin/miniproject/triage-agent/eval/results/runs/feature_kv_pinning_phase2_adversarial_safety_summary.json)
 * **Clinical Invariant Gate Summary (20 Trajectories):** [`eval/results/runs/kv_pinning_phase2_invariant_gate.json`](file:///home/albin/miniproject/triage-agent/eval/results/runs/kv_pinning_phase2_invariant_gate.json)
-* **Pipeline Latency Summary (15 Cases):** [`eval/results/runs/20261019_111808_phase2_kv_pinning_speculative/summary.json`](file:///home/albin/miniproject/triage-agent/eval/results/runs/20261019_111808_phase2_kv_pinning_speculative/summary.json)
-* **Candidate GCD Summary:** [`eval/results/runs/candidate_gcd_summary.json`](file:///home/albin/miniproject/triage-agent/eval/results/runs/candidate_gcd_summary.json)
 * **Benchmark Runner Script:** [`eval/runners/run_kv_pinning_benchmark.py`](file:///home/albin/miniproject/triage-agent/eval/runners/run_kv_pinning_benchmark.py)
 * **Unit Test Suite:** [`tests/test_kv_pinning.py`](file:///home/albin/miniproject/triage-agent/tests/test_kv_pinning.py)
