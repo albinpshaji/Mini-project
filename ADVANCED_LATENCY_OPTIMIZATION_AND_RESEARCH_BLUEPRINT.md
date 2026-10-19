@@ -332,13 +332,13 @@ def stream_chat_generator_prewarmed(user_text: str):
 
 ## 6. Actionable Implementation Roadmap
 
-| Phase | Milestone | Primary Modules | Expected Latency Reduction | Safety & Accuracy Validation |
-|---|---|---|---|---|
-| **Phase 1** | **Compact Schema GCD + Deterministic Offloading** | `src/safety/gcd_engine.py`<br>`src/safety/clinical_schema.py` | Phase 2 extraction drops from **3,359 ms to ~800 ms (-78%)** | Full 60-case benchmark (`run_gcd_benchmark.py`), verify $\kappa \ge 0.84$, 100% valid enums. |
-| **Phase 2** | **Static System Prefix KV-Pinning (`num_keep`)** | `src/slm/slm_engine.py`<br>`src/speculative/speculator.py` | SLM prefill latency drops from **280 ms to <10 ms (-96%)** | Benchmark speculative partial restart latency with `benchmark_latency.py`. |
-| **Phase 3** | **Acoustic Pre-Warming & Pipelined TTFA** | `src/web/server.py`<br>`src/tts/piper_engine.py` | Conversational TTFA drops from **176 ms to <40 ms (4.4x speedup)** | Live audio streaming verification in browser (`/api/chat/stream`), 0 buffer underruns. |
-| **Phase 4** | **Zero-VRAM Lookahead Jacobi Speculation** | `src/slm/slm_engine.py`<br>`src/speculative/speculator.py` | SLM generation drops from **1,500 ms to ~800 ms (1.8x speedup)** | Unit test verification against 3-Stage Invariant Gate (`test_divergence_gate.py`). |
-| **Phase 5** | **SnapKV Attention Anchor Pruning** | `src/slm/slm_engine.py`<br>`src/scheduler/async_scheduler.py` | Multi-turn latency degradation eliminated (constant ~50 tok/s) | 12-turn intake stress test, verify VRAM stays strictly below 4,096 MB. |
+| Phase | Milestone | Status & Branch | Primary Modules | Latency Reduction & Result | Safety & Accuracy Validation |
+|---|---|---|---|---|---|
+| **Phase 1** | **Compact Schema GCD + Deterministic Offloading** | ✅ **COMPLETED** (`feature/compact-gcd-phase1`) | `src/safety/gcd_engine.py`<br>`src/safety/clinical_schema.py` | Extraction dropped from **3,359 ms to 2,167 ms (-35.5%)** | 60/60 cases, $\kappa = 0.9768$, 0 schema errors. |
+| **Phase 2** | **Static System Prefix KV-Pinning (`num_keep`)** | ✅ **COMPLETED** (`feature/kv-pinning-phase2`) | `src/slm/slm_engine.py`<br>`src/speculative/speculator.py` | Cold prefill: **6,960 ms ➔ 90 ms (77x)**<br>Warm prefill: **488 ms ➔ 86 ms (5.6x)** | Pinned 1,057 tokens in GPU KV-cache; 0 drift. |
+| **Phase 3** | **Acoustic Pre-Warming & Pipelined TTFA** | ✅ **COMPLETED** (`feature/acoustic-prewarm-phase3`) | `src/web/server.py`<br>`src/tts/piper_engine.py` | Chunk 0 synthesis: **68.5 ms ➔ 0.05 ms**<br>Lead margin: **+2,329 ms** | 78.3% opener hit rate, **0.0% buffer underruns**. |
+| **Phase 4** | **Zero-VRAM Lookahead Jacobi Speculation & Pre-Emission** | ⏳ **PLANNED** (`feature/lookahead-speculation-phase4`) | `src/slm/slm_engine.py`<br>`src/speculative/speculator.py` | SLM generation drops from **1,500 ms to ~750 ms (2.0x speedup)** | Unit test verification against 3-Stage Invariant Gate (`test_divergence_gate.py`). |
+| **Phase 5** | **SnapKV Attention Anchor Pruning** | ⏳ **PLANNED** (`feature/snapkv-pruning-phase5`) | `src/slm/slm_engine.py`<br>`src/scheduler/async_scheduler.py` | Multi-turn degradation eliminated (constant ~50 tok/s) | 12-turn intake stress test, verify VRAM strictly $< 4,096\text{ MB}$. |
 
 ---
 
