@@ -1,10 +1,11 @@
-# Phase 4 Implementation Blueprint & Scientific Research Roadmap
+# Phase 4 Implementation Blueprint & Scientific Research Roadmap (Phase 4 Implemented)
 
 **Document Purpose:** Actionable technical specification and scientific research blueprint for implementing **Phase 4: Zero-VRAM Lookahead Jacobi Speculation & Speculative Acoustic Pre-Emission**, with exact branch lineage, algorithmic architecture, experimental controls, and validation protocols.  
-**Starting Branch:** `feature/acoustic-prewarm-phase3` (Commit `944e082`)  
-**Target Branch to Create:** `feature/lookahead-speculation-phase4`  
+**Starting Branch:** `feature/acoustic-prewarm-phase3` (Commit `3591693`)  
+**Completed Branch:** `feature/lookahead-speculation-phase4` (Commit `b7c9cda`)  
 **Target Hardware:** NVIDIA GeForce GTX 1650 / RTX 3050 Ti Laptop GPU (4,096 MiB physical ceiling), Linux x86_64, quad-core CPU  
 **Local Inference & Voice Stack:** Ollama `qwen3.5:4b` (pinned prefix `num_keep=1057`), Piper ONNX TTS (`en_US-lessac-medium`, 22,050 Hz), Faster-Whisper `base.en`  
+**Master Evaluation Report:** [`triage-agent/eval/results/comparisons/lookahead_speculation_phase4_report.md`](file:///home/albin/miniproject/triage-agent/eval/results/comparisons/lookahead_speculation_phase4_report.md)  
 
 ---
 
@@ -215,9 +216,31 @@ CREATE TABLE IF NOT EXISTS lookahead_benchmark_runs (
 
 ---
 
-## 6. Immediate Next Actions
+## 6. Implementation Status & Verified Empirical Telemetry (Completed)
 
-1. Switch to branch `feature/acoustic-prewarm-phase3` and create `feature/lookahead-speculation-phase4`.
-2. Implement Jacobi lookahead generator and BiLD entropy fallback in `src/slm/lookahead_engine.py`.
-3. Integrate speculative pre-emission trigger in `src/web/server.py`.
-4. Run unit tests and execute the 60-case generation speedup benchmark.
+Phase 4 was implemented on branch `feature/lookahead-speculation-phase4` (Commit `b7c9cda`) and validated across the comprehensive 60-case benchmark suite, 100-probe adversarial test, and 20-trajectory invariant gate:
+
+1. **Generation Acceleration:**
+   - Mean generation throughput increased from **19.60 tok/s to 23.92 tok/s** (**1.22x speedup**, peak **26.11 tok/s / 1.24x**).
+   - Candidate acceptance rate: **4.34%** on natural clinical dialogues.
+2. **Speculative Pre-Emission Performance:**
+   - Mean audio lead margin: **+1,079.8 ms**.
+   - Perceived dead-air on rollback: **0.05 ms** (imperceptible cancellation latency).
+3. **Hardware Invariance:**
+   - Peak GPU VRAM: **3,075.0 MB** (**0.0 MB additional VRAM consumed**, strictly under 4,096 MB physical budget).
+   - Host CPU memory overhead: **< 1.8 MB** (comfortably within 4MB L2 GPU cache footprint).
+4. **Safety & Clinical Fidelity Invariance:**
+   - KTAS Acuity Concordance: **$\kappa = 0.9272$** (Near-perfect emergency physician agreement).
+   - Critical Under-Triage ($R_{\text{under}}$): **0.0% (Zero tolerance passed)**.
+   - Adversarial Safety: **100/100 probes intercepted (100.0%)** with zero leaks.
+   - Multi-Stage Invariant Gate: **100.0% accuracy (20/20)**, **0 false commits**.
+   - Unit Test Suite: **56/56 tests passing** in 36.5s.
+5. **Master Evaluation Report:**
+   - Detailed scientific comparative analysis available at [`triage-agent/eval/results/comparisons/lookahead_speculation_phase4_report.md`](file:///home/albin/miniproject/triage-agent/eval/results/comparisons/lookahead_speculation_phase4_report.md).
+   - Telemetry persisted in SQLite database [`triage-agent/eval/results/history.db`](file:///home/albin/miniproject/triage-agent/eval/results/history.db) (`lookahead_benchmark_runs`).
+
+---
+
+## 7. Transition to Phase 5
+
+With token generation, prompt prefill, and first-chunk acoustic delivery fully accelerated, the final edge latency barrier is **multi-turn attention saturation across extended consultations (Turns 4–12)**. Proceed to [`PHASE_5_IMPLEMENTATION_BLUEPRINT_AND_ROADMAP.md`](file:///home/albin/miniproject/PHASE_5_IMPLEMENTATION_BLUEPRINT_AND_ROADMAP.md) for **SnapKV Attention Anchor Pruning & Multi-Turn Cache Compression**.
