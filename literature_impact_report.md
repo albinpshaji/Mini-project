@@ -1,6 +1,6 @@
 # Literature Impact Report: Theoretical Foundations, SOTA Benchmarks, and Architectural Blueprint for the Speculative Multimodal Triage Agent
 
-This report provides an exhaustive, multi-dimensional analysis of the **forty (40) research papers** assembled in the project library (`/home/albin/miniproject/papers/`). 
+This report provides an exhaustive, multi-dimensional analysis of the **forty-four (44) research papers** assembled in the project library (`/home/albin/miniproject/papers/`). 
 
 The primary objective of this document is to serve as a self-contained, definitive reference manual. A researcher or developer can read this single report and understand:
 1. The exact mathematical and algorithmic mechanics of each paper.
@@ -9,7 +9,7 @@ The primary objective of this document is to serve as a self-contained, definiti
 
 ---
 
-## Master Taxonomy of the 40 Research Papers
+## Master Taxonomy of the 44 Research Papers
 
 ```mermaid
 mindmap
@@ -41,6 +41,7 @@ mindmap
       Online Speculative Decoding (Dynamic Model Adaptation)
       DeepSeek-V3 MTP (Multi-Token Speculative Decoding)
       DeepSeek-R1 (Reasoning via RL & Distillation)
+      DLite (History-Free Speculative Decoding Oct'26)
     Pillar 4: Edge Memory, Quantization & KV-Cache Pruning
       SnapKV (Attention Anchor Pruning)
       KVQuant (2-bit/3-bit Vector Quantization)
@@ -48,6 +49,9 @@ mindmap
       DuoAttention (Retrieval vs. Streaming Heads ICLR'25)
       PyramidKV (Layer-Wise Information Funneling)
       ThinK (Query-Driven Key Channel Pruning ICLR'25)
+      DropKV (Decoupled Output Perturbation Oct'26)
+      Prism Attention (Proposal-Refined Index Sharing Oct'26)
+      RoLaQ (2-Bit MLA Latent Quantization Oct'26)
     Pillar 5: Clinical Triage, Safety & Parallel Tooling
       LLMCompiler (Parallel Tool Dependency DAGs)
       Gorilla (Zero-Hallucination API Tool Execution)
@@ -478,6 +482,86 @@ Most KV compression techniques focus exclusively on the *sequence length dimensi
 
 #### 4. Direct Impact on the Triage Agent
 * **Future Phase Synergy:** Demonstrates that Phase 5 token pruning (SnapKV + DuoAttention) can be compounded in future phases with intra-vector channel compression to push total multi-turn KV footprint to <80 MB.
+
+---
+
+### Paper 41: DropKV: Decoupling Residual-Output Perturbation for Near-Optimal KV-Cache Eviction
+* **Authors & Affiliations:** Aozhong Zhang, Selcuk Gurses, Yanxia Deng, Naigang Wang, Chi-Chun Liu, Davis Wertheimer, Derrick Liu, Xin Li, Zi Yang, Felix X. -F. Ye, Penghang Yin
+* **Venue & Identifier:** `arXiv:2610.22130` (October 15, 2026)
+* **File:** [`papers/ArXiv2610_DropKV_Residual_Output_Perturbation_Eviction.pdf`](file:///home/albin/miniproject/papers/ArXiv2610_DropKV_Residual_Output_Perturbation_Eviction.pdf)
+
+#### 1. Core Problem & Premise
+While recent KV cache eviction methods move beyond simple attention heuristics to incorporate value states, optimizing which tokens to drop to minimize output perturbation is an NP-hard combinatorial problem, leading prior works to use mathematically suboptimal heuristics that cannot be efficiently kernelized.
+
+#### 2. Key Architecture & Methodology
+* **Decoupled Residual-Output Perturbation:** Decouples the joint combinatorial eviction decision into independent per-token perturbation scoring, admitting a provable constant-factor approximation guarantee under a verified cone condition.
+* **Fused Triton Scoring Kernels:** Operates without materializing the full attention matrix, yielding a **19.8x scoring-kernel speedup**.
+
+#### 3. Empirical Results
+* Outperforms all state-of-the-art baselines on RULER and LongBench benchmarks under equivalent cache budgets.
+* Achieves the lowest inference latency among all eviction methods while remaining faster than the uncompressed dynamic cache baseline.
+
+#### 4. Direct Impact on the Triage Agent
+* **Core Algorithm for Phase 5 Pruning:** Provides a mathematically optimal, kernelized criterion for evicting non-anchor conversational tokens in multi-turn triage without risk of output degradation.
+
+---
+
+### Paper 42: DLite: History-Free Speculative Decoding for Agentic AI
+* **Authors & Affiliations:** Jiaming Xu, Hanzhen Wang, Tianlang Zhao, Jiewen Xiao, Chengze Yuan, Jiayi Pan, Yongkang Zhou, Jiancai Ye, Yu Wang, Guohao Dai
+* **Venue & Identifier:** `arXiv:2610.23787` (October 16, 2026)
+* **File:** [`papers/ArXiv2610_DLite_History_Free_Speculative_Decoding_Agentic.pdf`](file:///home/albin/miniproject/papers/ArXiv2610_DLite_History_Free_Speculative_Decoding_Agentic.pdf)
+
+#### 1. Core Problem & Premise
+Agentic multi-turn interaction introduces long, continuously expanding contexts. Under such workloads, traditional speculative draft models suffer up to an **80% degradation in draft acceptance length**, while maintaining their historical KV-cache introduces massive system memory overhead.
+
+#### 2. Key Architecture & Methodology
+* **History-Free Drafting:** Reuses contextual hidden states directly from the target model and performs local speculative candidate prediction without maintaining draft model historical KV-cache.
+* **Lightweight Sequential Head:** Restores intra-block causal dependencies with near-zero compute overhead.
+
+#### 3. Empirical Results
+* Achieves **2–6 token acceptance length** on complex agentic and long-context workloads.
+* Outperforms state-of-the-art speculative decoding (DSpark) by **up to 70%**.
+
+#### 4. Direct Impact on the Triage Agent
+* **Validates Zero-VRAM Drafting Paradigm:** Empirically confirms our Phase 4 Jacobi lookahead design choice—proving that eliminating separate draft-model KV history is the winning strategy for long multi-turn agent interactions on memory-constrained edge hardware.
+
+---
+
+### Paper 43: Prism Attention: Proposal-Refined Index Sharing Mechanism for Efficient LLMs Inference
+* **Authors & Affiliations:** Zhenxu Tian, Kebin Liu, Zhengwu Yang, Yi Su, Qingqing Dang, Yanlin Sha, Kaipeng Deng, Dianhai Yu, Yanjun Ma, Juntao Li, Min Zhang
+* **Venue & Identifier:** `arXiv:2610.22985` (October 16, 2026)
+* **File:** [`papers/ArXiv2610_Prism_Attention_Index_Sharing_Sparse_KV.pdf`](file:///home/albin/miniproject/papers/ArXiv2610_Prism_Attention_Index_Sharing_Sparse_KV.pdf)
+
+#### 1. Core Problem & Premise
+Token-level sparse attention often suffers from high overhead due to repeatedly recomputing layer-wise sparse indices. Rigid static reuse across layers causes progressive deviation from layer-specific optima and substantial attention loss.
+
+#### 2. Key Architecture & Methodology
+* **Proposal-Refined Coarse-to-Fine Indexing:** Observes that inter-layer salient token shift is localized. Uses a coarse proposal from anchor layers and refines boundaries locally at each layer, combining efficiency with layer-specific adaptability.
+
+#### 3. Empirical Results
+* Achieves a **3.4x end-to-end decoding speedup** over FlashAttention at 128K context length with SOTA accuracy across reasoning benchmarks.
+
+#### 4. Direct Impact on the Triage Agent
+* Provides an efficient mechanism for cross-layer KV index sharing across Qwen's 32 layers during multi-turn consultation.
+
+---
+
+### Paper 44: RoLaQ: Joint Rotation and Range Calibration for 2-Bit KV Caches in Multi-Head Latent Attention
+* **Authors & Affiliations:** Shiyu Ji, Peng Ling, Chen Lin, Shupeng Li, Yixuan Wang, Qingfu Zhu, Wanxiang Che
+* **Venue & Identifier:** `arXiv:2610.20686` (October 14, 2026)
+* **File:** [`papers/ArXiv2610_RoLaQ_2Bit_KV_Cache_DeepSeek_MLA.pdf`](file:///home/albin/miniproject/papers/ArXiv2610_RoLaQ_2Bit_KV_Cache_DeepSeek_MLA.pdf)
+
+#### 1. Core Problem & Premise
+In DeepSeek-style Multi-Head Latent Attention (MLA), KV content is compressed into a shared latent space per token. At extreme 2-bit quantization, reconstruction errors perturb both attention matching and value readout.
+
+#### 2. Key Architecture & Methodology
+* **Rotation-Calibrated Latent Quantization (RoLaQ):** Refines shared rotation within subspaces defined by frozen key/value projections, coupled with learned quantization thresholds and gains.
+
+#### 3. Empirical Results
+* On DeepSeek-V2-Lite, provides **3.96x KV capacity** under equivalent memory budgets and **2.51x decoding throughput** with 256K input tokens.
+
+#### 4. Direct Impact on the Triage Agent
+* Provides the mathematical quantization foundation if deploying DeepSeek-style MLA architectures on edge devices.
 
 ---
 
