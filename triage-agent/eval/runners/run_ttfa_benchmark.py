@@ -87,7 +87,8 @@ def run_ttfa_benchmark(
     config_path: str = "config.yaml",
     dataset_path: str = "eval/data/clinical_vignettes_60.json",
     max_cases: int = 60,
-    output_dir: str = "eval/results"
+    output_dir: str = "eval/results",
+    branch_name: str = "feature/lookahead-speculation-phase4",
 ):
     print("=" * 80)
     print(" ⚡ PHASE 3 BENCHMARK: GLM-4-VOICE ACOUSTIC PRE-WARMING & PIPELINED TTFA")
@@ -335,8 +336,8 @@ def run_ttfa_benchmark(
     summary = {
         "run_id": run_id,
         "timestamp": datetime.datetime.now().isoformat(),
-        "phase": "Phase 3: GLM-4-Voice Acoustic Pre-Warming & Pipelined TTFA",
-        "branch": "feature/acoustic-prewarm-phase3",
+        "phase": "Phase 3/4: Acoustic Pre-Warming & Pipelined TTFA",
+        "branch": branch_name,
         "model_name": model_name,
         "cases_evaluated": len(records),
         "ttfa": {
@@ -401,6 +402,7 @@ if __name__ == "__main__":
     parser.add_argument("--config", default="config.yaml", help="Path to config.yaml")
     parser.add_argument("--dataset", default="eval/data/clinical_vignettes_60.json", help="Path to dataset")
     parser.add_argument("--cases", type=int, default=60, help="Number of cases to evaluate (default: 60)")
+    parser.add_argument("--branch", default="feature/lookahead-speculation-phase4", help="Branch name")
     parser.add_argument("--output-dir", default="eval/results", help="Results directory")
     args = parser.parse_args()
 
@@ -408,5 +410,6 @@ if __name__ == "__main__":
         config_path=args.config,
         dataset_path=args.dataset,
         max_cases=args.cases,
-        output_dir=args.output_dir
+        output_dir=args.output_dir,
+        branch_name=args.branch
     )

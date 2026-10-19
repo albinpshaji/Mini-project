@@ -19,6 +19,12 @@ slm:
   temperature: 0.3
   num_ctx: 3072                         # context window allowed for SLM (3000 range)
   max_history_messages: 24              # keep up to 12 full user-nurse dialogue rounds
+  use_lookahead: true                   # Phase 4: Zero-VRAM Lookahead Jacobi Speculation
+  lookahead_depth: 8                    # K token depth for Jacobi rollout
+  lookahead_branches: 3                 # B branches per node
+  lookahead_max_candidates: 12          # Max candidate sequences in L2 cache budget
+  bild_entropy_threshold: 0.15          # BiLD fallback entropy threshold (Delta p < 0.15)
+  speculative_pre_emission: true        # Phase 4: Speculative Acoustic Pre-Emission
 
 tts:
   backend: "piper"

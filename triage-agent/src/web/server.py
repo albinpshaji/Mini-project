@@ -945,6 +945,9 @@ def process_audio_pipeline(audio_bytes: bytes, filename_hint: str = "speech.webm
             log.warning("Placeholder fabrication detected in SLM response; substituting safe fallback.")
             agent_response = FABRICATION_FALLBACK_MESSAGE
 
+        if slm_engine is not None and hasattr(slm_engine, "get_lookahead_telemetry"):
+            speculative_info["lookahead"] = slm_engine.get_lookahead_telemetry()
+
     session.history.append({"role": "assistant", "text": agent_response})
 
     # 7. Piper TTS Synthesis

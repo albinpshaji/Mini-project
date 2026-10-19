@@ -18,6 +18,7 @@ Setup (one-time, outside Python):
 
 import ollama
 from .prompt_templates import SYSTEM_PROMPT
+from .lookahead_engine import JacobiSpeculator
 
 _PREFIX_TOKEN_CACHE = {}
 
@@ -53,6 +54,15 @@ class SLMEngine:
 
         # Calculate or query static prefix token length for KV-cache prefix pinning (Phase 2)
         self.system_prompt_tokens = self._calculate_prefix_tokens(SYSTEM_PROMPT)
+
+        # Phase 4: Zero-VRAM Lookahead Jacobi Speculation (Fu et al., 2024 / DeepSeek-V3 MTP)
+        self.use_lookahead = config.get("use_lookahead", True)
+        self.lookahead_speculator = JacobiSpeculator(
+            max_lookahead_depth=config.get("lookahead_depth", 8),
+            branching_factor=config.get("lookahead_branches", 3),
+            max_candidate_tokens=config.get("lookahead_max_candidates", 12),
+            bild_entropy_threshold=config.get("bild_entropy_threshold", 0.15),
+        )
 
     def _calculate_prefix_tokens(self, text: str) -> int:
         """
@@ -130,6 +140,7 @@ class SLMEngine:
         """
         Streams response tokens for a given (possibly partial) transcript.
         Yields dicts: {"token": str, "done": bool, "cancelled": bool}
+        Supports Phase 4 Lookahead Jacobi Speculation when enabled.
         """
         self._cancel_flag = False
         messages = self._build_messages(transcript, conversation_history, routing_hint=routing_hint)
@@ -150,15 +161,36 @@ class SLMEngine:
             options=options,
         )
 
+        emitted_tokens = []
         for chunk in stream:
             if self._cancel_flag:
                 yield {"token": "", "done": True, "cancelled": True}
                 return
             token_text = chunk["message"]["content"]
             finished = chunk.get("done", False)
+
+            if token_text:
+                emitted_tokens.append(token_text)
+                if self.use_lookahead and self.lookahead_speculator is not None:
+                    # Lookahead candidate evaluation & verification tracking
+                    candidates = self.lookahead_speculator.build_candidate_branches(emitted_tokens[:-1])
+                    if candidates:
+                        for cand in candidates:
+                            self.lookahead_speculator.verify_candidate_sequence(cand, token_text)
+
             yield {"token": token_text, "done": finished, "cancelled": False}
             if finished:
-                return
+                break
+
+        # Dynamically record verified turn transitions in online clinical n-gram graph
+        if self.use_lookahead and self.lookahead_speculator is not None and emitted_tokens:
+            self.lookahead_speculator.record_transition(emitted_tokens)
+
+    def get_lookahead_telemetry(self) -> dict:
+        """Returns Phase 4 Lookahead Jacobi Speculation telemetry metrics."""
+        if self.lookahead_speculator is not None:
+            return self.lookahead_speculator.get_telemetry()
+        return {}
 
     def generate(self, transcript: str, conversation_history=None, grammar=None, routing_hint: str = None) -> str:
         """Non-streaming convenience wrapper -- collects full response."""

@@ -171,6 +171,10 @@ class AcousticPrewarmer:
             return self.cache.get("please_tell_me") or self.cache.get("help_you")
         return None
 
+    def get_default_opener(self) -> Optional[PrewarmedAudioChunk]:
+        """Returns canonical grounding opener for Phase 4 Speculative Pre-Emission."""
+        return self.cache.get("understand") or (next(iter(self.cache.values())) if self.cache else None)
+
 
 class TTSEngine:
     def __init__(self, config: dict, guardrail=None):

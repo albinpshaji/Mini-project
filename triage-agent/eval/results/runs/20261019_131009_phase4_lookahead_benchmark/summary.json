@@ -1,0 +1,18 @@
+{
+  "run_id": "phase4_lookahead_20261019_131009",
+  "timestamp": "20261019_131009",
+  "branch": "feature/lookahead-speculation-phase4",
+  "model_name": "qwen3.5:4b",
+  "num_cases": 60,
+  "baseline_mean_throughput_tok_s": 19.6,
+  "baseline_median_throughput_tok_s": 20.16,
+  "lookahead_mean_throughput_tok_s": 23.92,
+  "lookahead_median_throughput_tok_s": 24.72,
+  "mean_speedup_factor": 1.22,
+  "mean_acceptance_rate": 0.0434,
+  "median_g2g_ms": 1979.79,
+  "p90_g2g_ms": 3020.44,
+  "rollback_perceived_ttfa_ms": 0.05,
+  "peak_vram_mb": 3075.0,
+  "summary_json_path": "eval/results/runs/20261019_131009_phase4_lookahead_benchmark/summary.json"
+}

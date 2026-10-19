@@ -37,6 +37,10 @@ class Speculator:
         """Expose pinned system prompt token count from underlying SLMEngine."""
         return self.engine.system_prompt_tokens
 
+    def get_lookahead_telemetry(self) -> dict:
+        """Expose Phase 4 Lookahead Jacobi Speculation telemetry."""
+        return self.engine.get_lookahead_telemetry()
+
     def start_speculation(self, partial_text: str, conversation_history: list):
         self.cancel()
 

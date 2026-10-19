@@ -1,0 +1,113 @@
+{
+  "run_id": "20261019_132207_phase4_lookahead_speculative",
+  "timestamp": "2026-10-19T13:25:23.453234",
+  "git_commit": "HEAD",
+  "architecture": "speculative_phase4_lookahead",
+  "model": "qwen3.5:4b",
+  "cases_evaluated": 60,
+  "stages_ms": {
+    "1_vad_silence_wait": {
+      "mean": 441.7
+    },
+    "2_final_asr_pass": {
+      "mean": 120.0
+    },
+    "3_slm_prefill": {
+      "mean": 797.3
+    },
+    "4_slm_generation": {
+      "mean": 862.7
+    },
+    "5_tools_guardrail": {
+      "mean": 0.2
+    },
+    "6_tts_synthesis": {
+      "mean": 75.0
+    }
+  },
+  "latency": {
+    "glass_to_glass_mean_ms": 2296.8,
+    "glass_to_glass_p50_ms": 2213.7,
+    "glass_to_glass_p90_ms": 3955.6,
+    "glass_to_glass_p99_ms": 9593.7,
+    "raw_latencies_ms": [
+      9593.67,
+      2709.08,
+      2215.41,
+      3327.1,
+      3561.2900000000004,
+      2334.73,
+      4074.11,
+      1097.15,
+      2617.5,
+      595.29,
+      1215.48,
+      718.02,
+      595.4200000000001,
+      3225.29,
+      3330.27,
+      1607.8300000000002,
+      4673.9,
+      845.2800000000001,
+      595.5200000000001,
+      1604.8700000000001,
+      4718.45,
+      2210.09,
+      2900.7,
+      2282.03,
+      1734.64,
+      2458.9199999999996,
+      1049.55,
+      1258.89,
+      3999.4,
+      2533.0899999999997,
+      1032.12,
+      3275.62,
+      3169.4599999999996,
+      1317.76,
+      1727.0800000000002,
+      1729.27,
+      3111.25,
+      1787.3100000000002,
+      2779.5899999999997,
+      1901.92,
+      1879.52,
+      2773.2200000000003,
+      738.35,
+      2518.12,
+      4164.51,
+      2323.95,
+      1980.16,
+      2300.0099999999998,
+      1152.57,
+      1155.42,
+      840.09,
+      790.43,
+      2211.91,
+      1057.67,
+      2769.5,
+      783.26,
+      2989.2300000000005,
+      1609.53,
+      2839.43,
+      3417.2000000000003
+    ]
+  },
+  "speculative_efficiency": {
+    "commit_rate_percent": 70.0,
+    "false_commit_count": 0,
+    "effective_speedup_factor": 1.45
+  },
+  "clinical_safety": {
+    "ktas_quadratic_weighted_kappa": 0.9272,
+    "under_triage_rate_percent": 0.0,
+    "over_triage_rate_percent": 0.0,
+    "safety_invariant_passed": true,
+    "dosage_leakage_rate_percent": 0.0
+  },
+  "hardware": {
+    "peak_vram_mb": 3075.0
+  },
+  "summary_json_path": "eval/results/runs/20261019_132207_phase4_lookahead_speculative/summary.json",
+  "raw_csv_path": "eval/results/runs/20261019_132207_phase4_lookahead_speculative/raw_metrics.csv"
+}
