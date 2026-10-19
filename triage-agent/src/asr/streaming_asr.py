@@ -70,6 +70,15 @@ class StreamingASR:
             open_silence_ms=self.silence_ms_threshold
         )
 
+        from src.asr.adaptive_endpointing import DyspneaAwareEndpointing
+        self.adaptive_endpointing = DyspneaAwareEndpointing(
+            tau_base_ms=config.get("vad_base_ms", 450),
+            alpha_slot_ms=config.get("vad_slot_alpha_ms", 270),
+            beta_dyspnea_ms=config.get("vad_dyspnea_beta_ms", 450),
+            sample_rate=self.sample_rate
+        )
+        self.use_slot_entropy = config.get("use_slot_entropy", True)
+
         self._audio_q = queue.Queue()
         self._running = False
         self._stream = None
@@ -223,9 +232,14 @@ class StreamingASR:
                     self._emit_partial(full_buf)
                     last_partial_emit = now_ms
 
-                # Dynamic silence threshold via Predictive Semantic VAD (150ms if closed, 500-800ms otherwise)
+                # Dynamic silence threshold via Dyspnea-Aware Slot-Entropy Endpointing (Phase 6)
                 min_utterance_samples = int(self.sample_rate * 0.4)
-                dynamic_silence_threshold = self.semantic_vad.get_silence_timeout_ms(self._last_partial_text)
+                if self.use_slot_entropy:
+                    dynamic_silence_threshold = self.adaptive_endpointing.evaluate(
+                        self._last_partial_text, pause_audio_chunk=frame_flat
+                    ).silence_timeout_ms
+                else:
+                    dynamic_silence_threshold = self.semantic_vad.get_silence_timeout_ms(self._last_partial_text)
 
                 # Finalize turn if silence threshold reached or max duration exceeded (12s)
                 max_samples = self.sample_rate * 12

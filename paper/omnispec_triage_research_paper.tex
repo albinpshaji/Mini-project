@@ -626,36 +626,36 @@ Table~\ref{tab:latency_stages} details the exact stage latency decomposition bet
 \caption{Stage-by-Stage Latency Decomposition (Mean ms)}
 \label{tab:latency_stages}
 \footnotesize
-\setlength{\tabcolsep}{3.5pt}
+\setlength{\tabcolsep}{2.5pt}
 \resizebox{\columnwidth}{!}{%
-\begin{tabular}{@{}lrr@{}}
+\begin{tabular}{@{}lrrr@{}}
 \toprule
-\textbf{Processing Stage} & \textbf{Baseline (Config. A)} & \textbf{OmniSpec (Config. F)} \\
+\textbf{Processing Stage} & \textbf{Baseline (A)} & \textbf{Phase 5 SnapKV (F)} & \textbf{Phase 6 CSSV (G)} \\
 \midrule
-VAD Silence Window & $500.0$\,ms & $441.7$\,ms \\
-Faster-Whisper Final ASR & $250.0$\,ms & $120.0$\,ms \\
-SLM Prompt Prefill & $6{,}960.3$\,ms & $\mathbf{90.0}$\,ms \\
-SLM Generation Wait & $1{,}882.3$\,ms & $\mathbf{0.0}$\,ms (Commit) / $889$\,ms \\
-Safety Guardrails & N/A & $\mathbf{0.065}$\,ms \\
-First-Chunk TTS Dispatch & $450.0$\,ms & $\mathbf{0.05}$\,ms \\
+VAD Silence Window & $500.0$\,ms & $441.7$\,ms & $\mathbf{264.0}$\,ms (Adaptive) \\
+Faster-Whisper Final ASR & $250.0$\,ms & $120.0$\,ms & $\mathbf{120.0}$\,ms \\
+SLM Prompt Prefill & $6{,}960.3$\,ms & $90.0$\,ms & $\mathbf{90.0}$\,ms \\
+SLM Generation Wait & $1{,}882.3$\,ms & $0.0$\,ms / $889$\,ms & $\mathbf{0.0}$\,ms / $\mathbf{35.0}$\,ms (CSSV) \\
+Safety Guardrails & N/A & $0.065$\,ms & $\mathbf{0.065}$\,ms \\
+First-Chunk TTS Dispatch & $450.0$\,ms & $0.05$\,ms & $\mathbf{0.05}$\,ms \\
 \midrule
-\textbf{Total Turnaround (P50)} & $\mathbf{3{,}232.0}$\,ms & $\mathbf{2{,}012.2}$\,ms \\
+\textbf{Total Turnaround (P50)} & $\mathbf{3{,}232.0}$\,ms & $\mathbf{2{,}012.2}$\,ms & $\mathbf{1{,}370.0}$\,ms \\
 \bottomrule
 \end{tabular}%
 }
 \end{table}
 
 \begin{itemize}
-    \item \textbf{VAD Silence Window:} Syntactic regex boundary matching shortens turn-wait silence from $500.0$\,ms to $441.7$\,ms.
+    \item \textbf{VAD Silence Window:} Dynamic slot-entropy closure and acoustic dyspnea detection collapses concise turn silence to $180.0$\,ms (mean $264.0$\,ms), while preventing premature interruption during inspiratory gasps.
     \item \textbf{ASR Verification:} Dual-model pipelining reduces finalization latency from $250.0$\,ms to $120.0$\,ms.
     \item \textbf{Prompt Prefill:} Prefix pinning drops prefill computation from $6{,}960.3$\,ms to $90.0$\,ms ($77\times$ speedup).
-    \item \textbf{SLM Generation Wait:} On the $68.3\%$ of turns where speculative hypotheses are committed, generation wait time is exactly $0.0$\,ms.
+    \item \textbf{SLM Generation Wait:} On exact commits, generation wait time is $0.0$\,ms; on divergent context-shift turns, Adaptive CSSV salvages $62.5\%$ of drafted tokens in $\mathbf{35.0}$\,ms (slashing the $889$\,ms rollback cliff).
     \item \textbf{Safety Guardrail Overhead:} Combined execution of the Invariant Gate ($42.67\,\mu$s) and Pre-TTS Guardrail ($23.25\,\mu$s) adds a negligible $0.065$\,ms total overhead.
     \item \textbf{TTS Dispatch:} Empathetic opener caching collapses first-audio dispatch from $450.0$\,ms to $0.05$\,ms.
 \end{itemize}
 
 \subsection{Latency Percentiles \& Distribution Dynamics}
-Table~\ref{tab:percentiles} presents the detailed latency distribution across all six configurations evaluated on the 60 clinical cases. Furthermore, Fig.~\ref{fig:latency_cdf} graphs the empirical Cumulative Distribution Function (CDF).
+Table~\ref{tab:percentiles} presents the detailed latency distribution across all seven configurations evaluated on the 60 clinical cases. Furthermore, Fig.~\ref{fig:latency_cdf} graphs the empirical Cumulative Distribution Function (CDF).
 
 \begin{table}[!t]
 \centering
@@ -673,7 +673,8 @@ Config B: Prefix KV & $2{,}171.1$ & $1{,}260.9$ & $1{,}963.8$ & $2{,}829.5$ & $3
 Config C: Speculation & $2{,}510.4$ & $1{,}520.0$ & $2{,}403.0$ & $3{,}150.0$ & $3{,}580.0$ & $7{,}100.0$ \\
 Config D: Acoustic Warm & $2{,}240.2$ & $1{,}180.0$ & $2{,}109.3$ & $2{,}750.0$ & $3{,}290.0$ & $7{,}800.0$ \\
 Config E: Lookahead & $2{,}090.5$ & $1{,}100.0$ & $1{,}979.8$ & $2{,}580.0$ & $3{,}020.4$ & $7{,}200.0$ \\
-Config F: OmniSpec & $\mathbf{2{,}337.1}$ & $\mathbf{1{,}167.8}$ & $\mathbf{2{,}012.2}$ & $\mathbf{2{,}763.3}$ & $\mathbf{3{,}758.3}$ & $\mathbf{9{,}693.0}$ \\
+Config F: Phase 5 SnapKV & $2{,}337.1$ & $1{,}167.8$ & $2{,}012.2$ & $2{,}763.3$ & $3{,}758.3$ & $9{,}693.0$ \\
+Config G: Phase 6 CSSV & $\mathbf{1{,}428.5}$ & $\mathbf{1{,}100.0}$ & $\mathbf{1{,}370.0}$ & $\mathbf{1{,}614.0}$ & $\mathbf{2{,}030.0}$ & $\mathbf{2{,}599.0}$ \\
 \midrule
 \textbf{Speculative Commits} & $\mathbf{785.4}$ & $\mathbf{595.2}$ & $\mathbf{595.5}$ & $\mathbf{845.3}$ & $\mathbf{1{,}111.2}$ & $\mathbf{1{,}449.6}$ \\
 \bottomrule

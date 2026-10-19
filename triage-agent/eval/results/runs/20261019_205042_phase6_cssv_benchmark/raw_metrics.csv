@@ -1,0 +1,6 @@
+case_id,category,partial_text,final_text,mode,diverged,polarity_shifted,similarity,vad_silence_ms,vad_rule,cssv_verify_ms,legacy_rollback_ms,salvage_ratio,accepted_prefix_tokens,ttfa_ms,glass_to_glass_ms,vram_mb
+cardiac_01,cardiac,I have severe pressure in my chest and my left arm,I have severe pressure in my chest and my left arm feels numb,salvaged_prefix,False,False,0.87,180,slot_resolved_acceleration,35.0,0.0,1.0,22,180.0,1100.0,3073.0
+cardiac_02,cardiac,My father passed out and he has no,My father passed out and he has no pulse and is not breathing,negation_flip_abort,True,True,0.69,180,slot_resolved_acceleration,0.03,889.0,0.0,0,1069.0,2030.0,3073.0
+cardiac_03,cardiac,My heart is pounding really fast and I feel,My heart is pounding really fast and I feel dizzy like I am going to faint,salvaged_prefix,True,False,0.67,450,open_turn,35.0,889.0,0.5,6,520.0,1585.0,3073.0
+cardiac_04,cardiac,Crushing chest tightness that started twenty,Crushing chest tightness that started twenty minutes ago while resting,salvaged_prefix,True,False,0.69,180,slot_resolved_acceleration,35.0,889.0,0.571,8,250.0,1315.0,3073.0
+cardiac_05,cardiac,Sharp pain in my chest when I take a deep,"Sharp pain in my chest when I take a deep breath, fever since yesterday",salvaged_prefix,True,False,0.73,180,slot_resolved_acceleration,35.0,889.0,0.69,20,250.0,1315.0,3073.0

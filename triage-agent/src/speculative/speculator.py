@@ -25,6 +25,15 @@ class Speculator:
         self._cancelled = False
         self._start_ts = None
 
+        # Phase 6: Adaptive Context-Shift Self-Speculative Verification (CSSV)
+        self.use_cssv = slm_config.get("use_cssv", True)
+        from src.speculative.cssv_engine import AdaptiveCSSVEngine
+        self.cssv_engine = AdaptiveCSSVEngine(
+            model_path=slm_config.get("model_path", None),
+            system_prompt="",
+            ollama_model_name=slm_config.get("model_name", "qwen3.5:4b"),
+        )
+
     def is_active(self) -> bool:
         with self._lock:
             return self._thread is not None and self._thread.is_alive()
@@ -44,6 +53,10 @@ class Speculator:
     def get_snapkv_telemetry(self) -> dict:
         """Expose Phase 5 SnapKV Attention Anchor Pruning telemetry."""
         return self.engine.get_snapkv_telemetry()
+
+    def get_cssv_telemetry(self) -> dict:
+        """Expose Phase 6 Adaptive CSSV telemetry."""
+        return self.cssv_engine.get_telemetry()
 
     def start_speculation(self, partial_text: str, conversation_history: list):
         self.cancel()
@@ -105,3 +118,39 @@ class Speculator:
     def get_triggering_partial(self):
         with self._lock:
             return self._triggering_partial
+
+    def resolve_cssv(self, final_transcript: str, on_prefix_ready=None):
+        """
+        Executes Adaptive CSSV verification and prefix salvage on divergent turns.
+        """
+        if self._thread is None:
+            return None
+
+        # Give background thread a short grace window to accumulate draft tokens
+        self._generation_done.wait(timeout=0.6)
+
+        with self._lock:
+            triggering_partial = self._triggering_partial
+            draft_str = "".join(self._buffer).strip()
+
+        if not draft_str or not triggering_partial:
+            return None
+
+        full_response, telemetry = self.cssv_engine.verify_and_splice(
+            partial_text=triggering_partial,
+            final_text=final_transcript,
+            draft_response=draft_str,
+            on_prefix_ready=on_prefix_ready,
+            slm_engine_fallback=self.engine,
+        )
+
+        accepted_len = telemetry.get("accepted_prefix_len", 0)
+        if accepted_len > 0 and not telemetry.get("negation_flip_detected", False):
+            prefix_words = draft_str.split()[:accepted_len]
+            return {
+                "salvaged_prefix": True,
+                "prefix_text": " ".join(prefix_words),
+                "full_response": full_response,
+                "telemetry": telemetry,
+            }
+        return None

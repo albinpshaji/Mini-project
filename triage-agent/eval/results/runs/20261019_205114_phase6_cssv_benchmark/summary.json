@@ -1,0 +1,23 @@
+{
+  "run_id": "cssv_phase6_20261019_205114",
+  "timestamp": "20261019_205114",
+  "branch": "feature/cssv-speculation-phase6",
+  "model_name": "qwen3.5:4b",
+  "num_cases": 60,
+  "divergent_cases": 7,
+  "exact_commit_cases": 43,
+  "polarity_flip_cases": 10,
+  "legacy_rollback_latency_ms": 889.0,
+  "cssv_verify_latency_ms": 35.0,
+  "verification_speedup": 25.4,
+  "mean_prefix_salvage_ratio": 0.625,
+  "mean_accepted_prefix_tokens": 23.6,
+  "salvaged_prefix_ttfa_ms": 451.1,
+  "median_glass_to_glass_ms": 1370.0,
+  "polarity_flip_false_commits": 0,
+  "concise_vad_silence_ms": 263.7,
+  "dyspneic_vad_silence_ms": 591.5,
+  "peak_vram_mb": 3075.0,
+  "summary_json_path": "eval/results/runs/20261019_205114_phase6_cssv_benchmark/summary.json",
+  "raw_csv_path": "eval/results/runs/20261019_205114_phase6_cssv_benchmark/raw_metrics.csv"
+}

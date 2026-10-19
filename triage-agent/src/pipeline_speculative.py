@@ -115,14 +115,22 @@ class SpeculativeTriagePipeline(SequentialTriagePipeline):
             _on_first_audio()
             self.tts.speak(response, blocking=True)
         else:
+            def _on_cssv_prefix(prefix_text: str):
+                _on_first_audio()
+                log.info("⚡ CSSV prefix dispatched immediately: %r", prefix_text)
+
             rollback_decision = resolve_speculation(
                 self.speculator, self.tts, transcript,
                 divergence_threshold=self.divergence_threshold,
+                on_prefix_ready=_on_cssv_prefix,
             )
             if rollback_decision.committed:
                 response = rollback_decision.speculative_response
                 speculative_used = True
-                log.info("⚡ Using SPECULATIVE response (Instant Playback).")
+                if rollback_decision.salvaged_prefix:
+                    log.info("⚡ Using CSSV SALVAGED response (Salvaged prefix: %r).", rollback_decision.prefix_text)
+                else:
+                    log.info("⚡ Using SPECULATIVE response (Instant Playback).")
                 _on_first_audio()
                 self.tts.speak(response, blocking=True)
             else:

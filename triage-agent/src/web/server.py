@@ -796,8 +796,9 @@ def stream_chat_generator(user_text: str):
     total_lat_ms = int((time.time() - t_start) * 1000)
     vram_status = resource_scheduler.check_budget() if resource_scheduler else {}
     snapkv_telemetry = slm_engine.get_snapkv_telemetry() if slm_engine and hasattr(slm_engine, "get_snapkv_telemetry") else {}
+    cssv_telemetry = speculator.get_cssv_telemetry() if speculator and hasattr(speculator, "get_cssv_telemetry") else {}
 
-    yield f"data: {json.dumps({'type': 'done', 'agent_response': assembled_response, 'audio_base64': full_audio_base64, 'is_emergency': False, 'slots': session.latest_slots, 'total_latency_ms': total_lat_ms, 'vram': vram_status, 'snapkv': snapkv_telemetry})}\n\n"
+    yield f"data: {json.dumps({'type': 'done', 'agent_response': assembled_response, 'audio_base64': full_audio_base64, 'is_emergency': False, 'slots': session.latest_slots, 'total_latency_ms': total_lat_ms, 'vram': vram_status, 'snapkv': snapkv_telemetry, 'cssv': cssv_telemetry})}\n\n"
 
 
 @app.post("/api/chat/stream")
@@ -930,6 +931,27 @@ def process_audio_pipeline(audio_bytes: bytes, filename_hint: str = "speech.webm
                     log.info(f"⚡ [SPECULATIVE CMSPE] COMMITTED! (Similarity: {sim:.2f} >= {session.divergence_threshold}) -> Zero perceived wait!")
                 else:
                     speculator.cancel()
+            elif div.polarity_shifted:
+                speculator.cancel()
+                log.warning(f"🛡️ [CSSV] POLARITY INVERSION SHIELD TRIGGERED -> Safe rollback to fresh pass")
+                speculative_info.update({"committed": False, "similarity": round(sim, 2), "status": "POLARITY_ABORT"})
+            elif hasattr(speculator, "resolve_cssv"):
+                # Phase 6 CSSV Salvage
+                salvage_res = speculator.resolve_cssv(transcribed_text)
+                if salvage_res and salvage_res.get("salvaged_prefix"):
+                    agent_response = salvage_res.get("full_response", salvage_res.get("prefix_text", ""))
+                    committed = True
+                    speculative_info.update({
+                        "committed": True,
+                        "similarity": round(sim, 2),
+                        "status": "CSSV_SALVAGED",
+                        "cssv": salvage_res.get("telemetry", {}),
+                    })
+                    log.info(f"⚡ [CSSV SPECULATION] PREFIX SALVAGED ({salvage_res['telemetry'].get('accepted_prefix_len')} tokens) -> Immediate handoff!")
+                else:
+                    speculator.cancel()
+                    log.info(f"🔄 [SPECULATIVE CMSPE] DIVERGED (Similarity: {sim:.2f} < {session.divergence_threshold}) -> Rollback to fresh pass")
+                    speculative_info.update({"committed": False, "similarity": round(sim, 2), "status": "ROLLED_BACK"})
             else:
                 speculator.cancel()
                 log.info(f"🔄 [SPECULATIVE CMSPE] DIVERGED (Similarity: {sim:.2f} < {session.divergence_threshold}) -> Rollback to fresh pass")
@@ -950,6 +972,8 @@ def process_audio_pipeline(audio_bytes: bytes, filename_hint: str = "speech.webm
             speculative_info["lookahead"] = slm_engine.get_lookahead_telemetry()
         if slm_engine is not None and hasattr(slm_engine, "get_snapkv_telemetry"):
             speculative_info["snapkv"] = slm_engine.get_snapkv_telemetry()
+        if speculator is not None and hasattr(speculator, "get_cssv_telemetry"):
+            speculative_info["cssv"] = speculator.get_cssv_telemetry()
 
     session.history.append({"role": "assistant", "text": agent_response})
 

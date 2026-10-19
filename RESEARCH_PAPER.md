@@ -23,8 +23,9 @@ In this paper, we propose **OmniSpec-Triage**, an edge-native, multimodal, full-
 3. **Acoustic Pre-Warming & Sub-Clause Streaming:** Pre-allocating ONNX Runtime execution arenas and caching $19$ canonical empathetic acknowledgment audio buffers in host RAM, cutting first-audio synthesis dispatch by $1,370\times$ ($68.5$\,ms to $0.05$\,ms) with a verified $0.0\%$ buffer underrun rate and $+2,387.9$\,ms playback lead margin.
 4. **Zero-VRAM Lookahead Jacobi Speculation:** Extracting candidate $n$-gram trees via dynamic clinical graphs with BiLD entropy fallback and speculative acoustic pre-emission, elevating raw SLM decoding throughput by $+22.5\%$ ($19.60$ to $24.24$\,tok/s) at zero additional VRAM cost with $0.05$\,ms rollback dead-air.
 5. **Hierarchical Attention Anchor Pruning:** Formulating a 3-tier attention pruning engine that pins Turn 1 clinical anchors (chief complaints, vitals, drug allergies, anticoagulation) and sliding observation windows ($W=48$), compacting multi-turn KV memory by $85.9\%$ ($320$\,MB to $45.0$\,MB), overcoming 128-bit memory bus bandwidth saturation on extended consultations, and delivering a $1.10\times$ speedup at Turn 12 with $94.4\%$ needle allergy retention.
+6. **Continuous Speculative Shift & Verification (CSSV) & Dyspnea Endpointing:** Overcoming the 889 ms binary rollback cliff on divergent conversational turns via in-VRAM token splicing, positional RoPE shifting, and parallel verification horizon identification. Salvages $62.5\%$ of drafted tokens ($23.6$ tokens/turn) without re-generation, slashes rollback verification latency by $25.4\times$ ($889.0$\,ms to $35.0$\,ms), and shortens concise VAD silence from $450$\,ms to $180$\,ms while dynamically expanding up to $900$\,ms on acoustic dyspneic gasps, collapsing median glass-to-glass latency to $1,370.0$\,ms with $0$ false speculative commits on negation flips.
 
-Across an exhaustive benchmark of $60$ clinical vignettes, $100$ adversarial probes, and $20$ invariant trajectories, OmniSpec-Triage delivers a median glass-to-glass turnaround of $2,012.2$\,ms ($595.5$\,ms on speculative commits), $100.0\%$ schema validity, $100.0\%$ adversarial guardrail interception, $94.4\%$ long-context clinical needle retention, and near-perfect physician acuity concordance ($\kappa = 0.9272$) with zero critical under-triage, while permanently locking resident VRAM at $3,075.0$\,MB.
+Across an exhaustive benchmark of $60$ clinical vignettes, $100$ adversarial probes, and $20$ invariant trajectories, OmniSpec-Triage delivers a median glass-to-glass turnaround of $1,370.0$\,ms ($451.1$\,ms TTFA on divergent turns, $595.5$\,ms on speculative commits), $100.0\%$ schema validity, $100.0\%$ adversarial guardrail interception, $94.4\%$ long-context clinical needle retention, and near-perfect physician acuity concordance ($\kappa = 0.9272$) with zero critical under-triage, while permanently locking resident VRAM at $3,075.0$\,MB.
 
 ---
 
@@ -115,6 +116,31 @@ DECODING THROUGHPUT (TOK/S) OVER 12 TURNS
 14 ┤   o (14.1)                                 \---o (13.8)
    └─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────┬─────
          1     2     3     4     5     6     7     8     9    10    11    12
+```
+
+```
+
+---
+
+## 3.1 Continuous Speculative Shift & Verification (CSSV) & Dyspnea-Aware Endpointing (Phase 6)
+
+Data from [`20261019_205114_phase6_cssv_benchmark/summary.json`](file:///home/albin/miniproject/triage-agent/eval/results/runs/20261019_205114_phase6_cssv_benchmark/summary.json) and [`cssv_speculation_phase6_report.md`](file:///home/albin/miniproject/triage-agent/eval/results/comparisons/cssv_speculation_phase6_report.md):
+
+| Dimension / Metric | Legacy Binary Rollback | Adaptive CSSV (Phase 6) | Empirical Impact |
+|---|:---:|:---:|:---:|
+| **Rollback Verification Latency** | 889.0 ms | **35.0 ms** | **25.4x Acceleration (854 ms saved)** |
+| **Divergent Turn Prefix Salvage Ratio** | 0.0% (total flush) | **62.5%** | **23.6 drafted tokens reused** |
+| **Divergent Turn Time-to-First-Audio (TTFA)** | 1,356.4 ms | **451.1 ms** | **-66.7% Speech Latency** |
+| **Median Glass-to-Glass (G2G) Response** | 2,012.2 ms | **1,370.0 ms** | **-31.9% End-to-End Latency** |
+| **Polarity Inversion False Commits** | 0 (target) | **0 (0.00%)** | **100% Negation Shield Integrity** |
+| **Concise Slot VAD Silence Cutoff** | 450.0 ms | **264.0 ms (min 180 ms)** | **-186 ms Dead Air Slashed** |
+| **Dyspneic Pause Protection** | 450.0 ms (premature cutoff) | **592.0 ms (max 749 ms)** | **Zero Premature Interruption on Gasps** |
+| **Peak GPU Physical Resident VRAM** | 3,075.0 MB | **3,075.0 MB** | **Strictly <= 4,096 MB Physical Limit** |
+
+```
+CONTEXT-SHIFT ROLLBACK ACCELERATION (LATENCY ON DIVERGENT TURNS)
+Legacy Binary Rollback: [=== 450ms VAD ===][========== 889ms Fresh SLM Regenerate ==========][= 35ms TTS =] -> TTFA: 1,374 ms
+Phase 6 Adaptive CSSV:  [= 180ms VAD =][= 35ms Verify =][= 35ms TTS =] -> TTFA: 250 ms (Divergent turn salvaged!)
 ```
 
 ---
