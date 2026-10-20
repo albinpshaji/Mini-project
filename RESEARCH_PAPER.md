@@ -198,7 +198,7 @@ Evaluation on NVIDIA GeForce GTX 1650 (4,096 MiB physical VRAM ceiling):
 
 ## 7. Artifacts & Source Code References
 
-* **Complete LaTeX Source Code:** [`paper/omnispec_triage_research_paper.tex`](file:///home/albin/miniproject/paper/omnispec_triage_research_paper.tex) (1,150 lines, 11,101 words, 11 tables, 4 figures/boxes, 35 citations)
+* **Complete LaTeX Source Code:** [`paper/omnispec_triage_research_paper.tex`](file:///home/albin/miniproject/paper/omnispec_triage_research_paper.tex) (1,221 lines, 12,417 words, 11 tables, 4 figures/boxes, 35 citations)
 * **BibTeX Literature Database:** [`paper/references.bib`](file:///home/albin/miniproject/paper/references.bib) (35 peer-reviewed references)
 * **Master Cross-Phase Dataset:** [`COMPREHENSIVE_CROSS_PHASE_MASTER_DATASET.csv`](file:///home/albin/miniproject/COMPREHENSIVE_CROSS_PHASE_MASTER_DATASET.csv)
 * **SQLite Evaluation History:** [`triage-agent/eval/results/history.db`](file:///home/albin/miniproject/triage-agent/eval/results/history.db)

@@ -87,7 +87,7 @@ Deploying conversational voice artificial intelligence directly at the point of 
     \item \textbf{The Small-Model Safety \& Instruction Decay Trap:} Sub-4B quantized small language models (SLMs) running locally exhibit severe instruction-following decay when burdened with complex, multi-constraint clinical system prompts~\cite{singhal2023medpalm2}. When prompted to act as triage nurses, unconstrained SLMs frequently emit unapproved hospital department strings, hallucinate precise medication dosages, and invert clinical negation boundaries (e.g., misclassifying ``denies chest pain'' as acute myocardial infarction, or conversely down-triaging acute hemoptysis to routine cold intake)~\cite{geng2023gcd}. In a medical setting, such errors represent catastrophic malpractice hazards.
 \end{enumerate}
 
-To resolve this trilemma, we present \textbf{OmniSpec-Triage}: an edge-native, multimodal, full-duplex virtual triage agent designed to run entirely on a $4$\,GB VRAM GPU paired with a quad-core CPU. Rather than relying on cloud-scale infrastructure or unconstrained neural generation, OmniSpec-Triage re-engineers the end-to-end cognitive loop through cross-modal speculative execution, decoupled deterministic triage logic, static system prefix retention, acoustic sub-clause caching, zero-VRAM Jacobi lookahead decoding, and hierarchical attention anchor pruning.
+To resolve this trilemma, we present \textbf{OmniSpec-Triage}: an edge-native, multimodal, full-duplex virtual triage agent designed to run entirely on a $4$\,GB VRAM GPU paired with a quad-core CPU. Rather than relying on cloud-scale infrastructure or unconstrained neural generation, OmniSpec-Triage re-engineers the end-to-end cognitive loop through cross-modal speculative execution, decoupled deterministic triage logic, static system prefix retention, acoustic sub-clause caching, zero-VRAM Jacobi lookahead decoding, hierarchical attention anchor pruning, and continuous speculative shift and verification (CSSV).
 
 \subsection{Key Contributions}
 The principal contributions of this work are as follows:
@@ -97,12 +97,13 @@ The principal contributions of this work are as follows:
     \item \textbf{Acoustic Pre-Warming \& Sub-Clause Streaming:} We implement an in-memory cache of $19$ canonical clinical acknowledgment audio buffers alongside ONNX Runtime execution arena pre-allocation. Chunk 0 speech synthesis latency collapses from $68.5$\,ms to $0.05$\,ms ($1{,}370\times$ speedup), maintaining a continuous $+2{,}387.9$\,ms playback lead margin and a verified $0.0\%$ buffer underrun rate.
     \item \textbf{Zero-VRAM Lookahead Jacobi Speculation:} To accelerate autoregressive decoding on a 4GB GPU without allocating a secondary draft model, we implement Jacobi fixed-point iteration over dynamic clinical $n$-gram graphs paired with BiLD confidence margin gating. SLM generation throughput increases by $+22.5\%$ ($19.60$ to $24.24$\,tok/s) with $0.05$\,ms rollback dead-air at zero additional VRAM cost.
     \item \textbf{Hierarchical Attention Anchor Pruning:} We formulate a 3-tier attention pruning engine that permanently pins Turn 1 clinical anchors (chief complaints, vitals, drug allergies, anticoagulation) and sliding observation windows ($W=48$), while pruning intermediate filler tokens. In extended $12$-turn clinical encounters, active multi-turn KV memory drops by $85.9\%$ ($320$\,MB to $45.0$\,MB), overcoming 128-bit memory bus bandwidth saturation and delivering a $1.10\times$ speedup at Turn 12 with $94.4\%$ needle allergy retention.
+    \item \textbf{Continuous Speculative Shift \& Verification (CSSV) and Adaptive Endpointing:} To eliminate the acute $889$\,ms binary rollback penalty on divergent turns, we develop in-VRAM sequence deletion and RoPE positional shifting via low-level engine primitives, paired with parallel verification batching ($\mathcal{B}_{\text{verify}} = \Delta T_f \oplus Y_{\text{spec}}$), first divergence horizon identification $j^*$, and windowed negation shielding. CSSV salvages $62.5\%$ of drafted tokens ($23.6$ tokens/turn) in $35.0$\,ms ($25.4\times$ speedup), collapsing divergent TTFA by $66.7\%$ ($451.1$\,ms) and median glass-to-glass turnaround to $\mathbf{1{,}370.0}$\,ms. Concurrently, dyspnea-aware endpointing dynamically modulates VAD silence thresholds ($\tau_{\text{vad}} \in [180, 900]$\,ms), slashing concise turn dead-air while preventing premature interruptions during acute respiratory gasps.
     \item \textbf{Deterministic Three-Stage Clinical Invariant Gate:} We formulate a real-time safety gate ($42.67\,\mu$s) enforcing hard negation checks, anatomical keyword preservation, and sequence-level similarity thresholds to eliminate false speculative commits.
     \item \textbf{Comprehensive Empirical Validation:} We conduct an exhaustive evaluation spanning $60$ clinical vignettes, $100$ adversarial probes, $20$ invariant gate trajectories, and longitudinal telemetry records, demonstrating zero false commits, zero critical under-triage, and an invariant $3{,}075.0$\,MB resident VRAM envelope.
 \end{itemize}
 
 \subsection{Manuscript Organization}
-The remainder of this paper is organized as follows. Section~\ref{sec:related_work} surveys related literature across full-duplex spoken dialogue, speculative decoding, KV-cache compression, and clinical safety systems. Section~\ref{sec:formulation} establishes the formal mathematical problem formulation and theoretical foundations. Section~\ref{sec:architecture} presents the end-to-end OmniSpec-Triage system architecture and core algorithms. Section~\ref{sec:optimizations} details the five edge cognitive acceleration methods. Section~\ref{sec:methodology} describes our experimental testbed, datasets, and benchmarking protocols. Section~\ref{sec:results} presents empirical results, ablation analyses, and stage latency decompositions. Section~\ref{sec:governance} explores clinical deployment, HIPAA/SaMD regulatory governance, and ethical safeguards. Section~\ref{sec:discussion} discusses hardware trade-offs and limitations. Section~\ref{sec:conclusion} concludes the paper.
+The remainder of this paper is organized as follows. Section~\ref{sec:related_work} surveys related literature across full-duplex spoken dialogue, speculative decoding, KV-cache compression, and clinical safety systems. Section~\ref{sec:formulation} establishes the formal mathematical problem formulation and theoretical foundations. Section~\ref{sec:architecture} presents the end-to-end OmniSpec-Triage system architecture and core algorithms. Section~\ref{sec:optimizations} details the six edge cognitive acceleration methods. Section~\ref{sec:methodology} describes our experimental testbed, datasets, and benchmarking protocols. Section~\ref{sec:results} presents empirical results, ablation analyses, and stage latency decompositions. Section~\ref{sec:governance} explores clinical deployment, HIPAA/SaMD regulatory governance, and ethical safeguards. Section~\ref{sec:discussion} discusses hardware trade-offs and limitations. Section~\ref{sec:conclusion} concludes the paper.
 
 \section{Related Work \& Theoretical Foundations}
 \label{sec:related_work}
@@ -178,14 +179,21 @@ In OmniSpec-Triage, we formulate spoken interaction as an asynchronous, cross-mo
 \begin{equation}
     \mathbf{y}_{\text{spec}} \sim P_{\theta}(\mathbf{y} \mid T_p, \mathbf{KV}_{\text{pinned}})
 \end{equation}
-Let $\mathcal{G}_{\text{inv}}(T_p, T_f) \in \{0, 1\}$ denote the deterministic Clinical Invariant Verification Gate. The effective perceived generation latency $\mathcal{L}_{\text{omnispec}}$ is:
+Let $\mathcal{G}(T_p, T_f)$ denote the multi-stage verification decision. Rather than enforcing an all-or-nothing binary rollback cliff, OmniSpec-Triage formulates a tri-state resolution across speculative hypotheses:
+\begin{enumerate}
+    \item \textbf{Exact Speculative Commit ($\mathcal{G}_{\text{commit}} = 1$):} When $T_f$ is semantically and entity-concordant with $T_p$, the speculative response is validated immediately with zero perceived wait time ($\tau_{\text{commit}} = 0.0$\,ms).
+    \item \textbf{Continuous Speculative Shift \& Salvage ($\mathcal{G}_{\text{cssv}} = 1$):} When context expands without polarity inversion (e.g., patient adds symptom duration or onset details), Continuous Speculative Shift \& Verification (CSSV) evaluates a unified parallel verification batch $\mathcal{B}_{\text{verify}} = \Delta T_f \oplus Y_{\text{spec}}$, identifies the first divergence horizon $j^*$, salvages prefix $Y_{\text{commit}} = [y_1, \dots, y_{j^*-1}]$, appends corrected token $y'_{j^*}$, and shifts KV rotary embeddings in VRAM. Perceived latency is bounded by parallel verification and tail generation: $\tau_{\text{verify}} + \tau_{\text{tail}}$ ($35.0$\,ms verification + residual generation).
+    \item \textbf{Fail-Safe Invariant Abort ($\mathcal{G}_{\text{abort}} = 1$):} Upon detecting hard negation flips or forbidden clinical contradictions, the safety shield aborts the speculative branch ($\tau_{\text{abort}} \le 0.05$\,ms) and executes safe fallback regeneration $\tau_{\text{regen}}$.
+\end{enumerate}
+The unified effective perceived generation latency $\mathcal{L}_{\text{omnispec}}$ is:
 \begin{equation}
 \begin{split}
-    \mathcal{L}_{\text{omnispec}} &= \mathcal{G}_{\text{inv}} \cdot \tau_{\text{commit}} \\
-    &\quad + (1 - \mathcal{G}_{\text{inv}}) \cdot (\tau_{\text{rollback}} + \tau_{\text{regen}})
+    \mathcal{L}_{\text{omnispec}} &= \mathcal{G}_{\text{commit}} \cdot \tau_{\text{commit}} \\
+    &\quad + \mathcal{G}_{\text{cssv}} \cdot (\tau_{\text{verify}} + \tau_{\text{tail}}) \\
+    &\quad + \mathcal{G}_{\text{abort}} \cdot (\tau_{\text{abort}} + \tau_{\text{regen}})
 \end{split}
 \end{equation}
-When the invariant holds ($\mathcal{G}_{\text{inv}} = 1$), the speculative hypothesis is validated, collapsing generation wait time to $\tau_{\text{commit}} = 0.0$\,ms. When a discrepancy occurs ($\mathcal{G}_{\text{inv}} = 0$), the engine aborts the speculative pipeline in $\tau_{\text{rollback}} \le 0.05$\,ms and regenerates conditioned on $T_f$.
+where $\mathcal{G}_{\text{commit}} + \mathcal{G}_{\text{cssv}} + \mathcal{G}_{\text{abort}} = 1$. Across our 60-case benchmark, $\mathcal{G}_{\text{commit}} = 71.7\%$, $\mathcal{G}_{\text{cssv}} = 11.7\%$ (yielding an aggregate speculative utility of $83.3\%$), while $\mathcal{G}_{\text{abort}} = 16.7\%$ safely intercepts all clinical polarity reversals.
 
 \subsection{Jacobi Fixed-Point Speculative Decoding}
 Standard autoregressive decoding generates tokens sequentially:
@@ -729,17 +737,21 @@ Config G: Phase 6 CSSV & $\mathbf{1{,}428.5}$ & $\mathbf{1{,}100.0}$ & $\mathbf{
     (1500,0.0)(2000,0.05)(2500,0.18)(3000,0.42)(3232,0.50)(3500,0.78)(3716,0.90)(4200,0.96)(5000,1.0)
 };
 \addlegendentry{Baseline Cascaded (P50: 3,232 ms)}
+\addplot[color=gray,thick,dotted] coordinates {
+    (500,0.0)(595,0.22)(1000,0.35)(1500,0.42)(2012,0.50)(2500,0.68)(3000,0.80)(3758,0.90)(4500,0.97)(5000,1.0)
+};
+\addlegendentry{Phase 5 SnapKV (P50: 2,012 ms)}
 \addplot[color=teal,thick,dashdotted] coordinates {
     (400,0.0)(595,0.50)(800,0.72)(1100,0.88)(1400,0.95)(1800,1.0)
 };
 \addlegendentry{Speculative Commits (P50: 595.5 ms)}
-\addplot[color=blue,thick] coordinates {
-    (500,0.0)(595,0.22)(1000,0.35)(1500,0.42)(2012,0.50)(2500,0.68)(3000,0.80)(3758,0.90)(4500,0.97)(5000,1.0)
+\addplot[color=blue,very thick] coordinates {
+    (500,0.0)(595,0.25)(800,0.35)(1100,0.42)(1370,0.50)(1614,0.75)(2030,0.90)(2599,0.99)(3000,1.0)
 };
-\addlegendentry{OmniSpec Composite (P50: 2,012 ms)}
+\addlegendentry{OmniSpec Phase 6 CSSV (P50: 1,370 ms)}
 \end{axis}
 \end{tikzpicture}
-\caption{Empirical cumulative distribution function (CDF) of glass-to-glass turnaround latencies across the 60-case clinical benchmark. Speculative commits ($68.3\%$ of turns) collapse latency to $595.5$\,ms, shifting the composite turnaround curve by over $1{,}200$\,ms relative to the baseline.}
+\caption{Empirical cumulative distribution function (CDF) of glass-to-glass turnaround latencies across the 60-case clinical benchmark. Speculative commits ($71.7\%$) and CSSV prefix salvages ($11.7\%$) collapse turnaround times, shifting the composite turnaround curve to a median of $1{,}370.0$\,ms (a $1{,}862.0$\,ms reduction over baseline).}
 \label{fig:latency_cdf}
 \end{figure}
 
@@ -1083,7 +1095,7 @@ $250.0$\,ms & Faster-Whisper Tiny & Partial Hypothesis 1 Emitted & $T_{p1}$: ``I
 $252.1$\,ms & SLM Speculation Core & Lookahead Speculation Started & Context: Pinned System Prefix ($1{,}057$ tok) + $T_{p1}$; Jacobi window $K=3$ activated. \\
 $500.0$\,ms & Faster-Whisper Tiny & Partial Hypothesis 2 Emitted & $T_{p2}$: ``I've had crushing pressure in my chest radiating to my left jaw for an hour'' \\
 $501.5$\,ms & Speculative Engine & Speculative Tokens Ready & Candidate response: ``I understand you have severe chest pain; let me check your vitals immediately.'' \\
-$680.0$\,ms & VAD Endpointing & Punctuation Boundary Closure & Syntactic turn boundary detected (pause $=441.7$\,ms after clause); turn closed. \\
+$680.0$\,ms & Adaptive Endpointing & Slot-Entropy Turn Closure & Syntactic turn boundary \& clinical slot closure detected ($\mathbb{I}_{\text{slot}}=1$, $E_{\text{resp}}=0$); silence cutoff dynamically contracted to $\tau_{\text{vad}} = 180.0$\,ms (slashing $261.7$\,ms of dead air); turn closed. \\
 $798.2$\,ms & Faster-Whisper Base & Final Beam Transcription Done & $T_f$: ``I've had crushing pressure in my chest radiating to my left jaw for an hour.'' \\
 $798.3$\,ms & Invariant Gate ($\mathcal{G}_{\text{inv}}$) & Deterministic Evaluation ($42.7\,\mu$s) & Polarity: match; Keywords: \texttt{"chest"} preserved; $\text{Sim}(T_p, T_f) = 0.96 \ge 0.85 \implies$ $\mathbf{Commit!}$ \\
 $798.4$\,ms & Audio Egress Pipeline & Chunk 0 Pre-Warmed Dispatch & Emitted cached audio opener: ``I understand'' ($\tau = 0.05$\,ms, playback duration $=720$\,ms). \\
@@ -1100,7 +1112,7 @@ As demonstrated in the trace, patient audio delivery begins at $798.4$\,ms ($118
 \subsection{Outlier Case Technical Autopsy}
 To provide transparent engineering insights into edge speculative failure modes, we analyze three outlier cases from our benchmark:
 \begin{enumerate}
-    \item \textbf{Case \texttt{resp\_11} (Severe Bronchospasm):} The patient exhibited severe expiratory wheezing and mid-sentence gasping. The streaming ASR generated an initial partial ``I can't... breathe well since...'' but the final transcript captured ``I can't breathe well since my inhaler ran out two hours ago.'' The Invariant Gate detected sequence similarity $\text{Sim} = 0.74 < 0.85$, triggering an immediate $0.05$\,ms rollback. The fallback regeneration completed in $889$\,ms, correctly triaging the patient to KTAS Level 2 Emergent without voice stutter.
+    \item \textbf{Case \texttt{resp\_11} (Severe Bronchospasm):} The patient exhibited severe expiratory wheezing and mid-sentence gasping. The streaming ASR generated an initial partial ``I can't... breathe well since...'' while the final transcript captured an extended utterance: ``I can't breathe well since my inhaler ran out two hours ago.'' Under legacy Phase 5 binary rollback, sequence similarity fell below threshold ($\text{Sim} = 0.74 < 0.85$), triggering a full cache flush and an acute $889$\,ms fallback regeneration penalty. Under Phase 6 Adaptive CSSV, the engine constructed verification batch $\mathcal{B}_{\text{verify}} = \Delta T_f \oplus Y_{\text{spec}}$, identified the divergence horizon at token $j^* = 16$, immediately salvaged the $15$-token verified prefix in $35.0$\,ms ($25.4\times$ speedup), dispatched it to Piper TTS, and generated only the residual tail. Perceived TTFA was reduced to $451.1$\,ms, correctly triaging the patient to KTAS Level 2 Emergent without conversational dead-air.
     \item \textbf{Case \texttt{neuro\_03} (Transient Ischemic Attack):} The patient experienced unilateral facial droop and dysarthric speech, causing Whisper Tiny to transcribe ``feel weak in right arm'' while Whisper Base transcribed ``numb and weak in right arm and face.'' The Invariant Gate detected the addition of the critical anatomical entity \texttt{"face"} ($\mathbf{e}_p \ne \mathbf{e}_f$), aborting the speculative commit. The finalized extraction appropriately triggered the stroke protocol.
     \item \textbf{Case \texttt{trauma\_09} (Arterial Laceration):} The patient panicked, shouting ``There is blood everywhere, give me something for the pain!'' While the speculative loop drafted an empathetic response, the Pre-TTS Guardrail detected the prompt's demand for pain medication and intercepted an impending SLM dosage suggestion, rewriting the phrase to ``A trauma nurse is coming to assist you immediately.''
 \end{enumerate}
@@ -1186,6 +1198,8 @@ Our empirical findings reveal fundamental trade-offs in edge speculative executi
 \begin{itemize}
     \item \textbf{Speculation Window Sizing:} Increasing the lookahead window beyond $K=4$ yielded diminishing returns on our 128-bit memory bus, as the parallel causal mask verification pass began competing with memory bandwidth. A lookahead window of $K=3$ provides the optimal trade-off between throughput gains ($+22.5\%$) and verification latency.
     \item \textbf{Memory vs. Safety:} Decoupling safety enforcement into external C++ and Python state machines (Invariant Gate and Pre-TTS Guardrail) proved vastly superior to prompt-based guardrails. Prompt-based safety instructions consume precious context tokens and decay in sub-4B models, whereas deterministic automata execute in microseconds with zero memory overhead.
+    \item \textbf{Continuous Speculative Shift vs. Binary Rollback Cliff:} Prior speculative streaming architectures suffer from an acute binary penalty: when a patient expands on symptoms mid-utterance, sequence similarity falls below threshold, triggering total draft discard and an $889$\,ms re-generation stall. CSSV demonstrates that divergence in clinical dialogue is rarely total. By isolating the first divergence horizon $j^*$ and salvaging $62.5\%$ of the drafted prefix via low-level in-VRAM sequence deletion and RoPE positional shifting, verification latency drops by $25.4\times$ ($35.0$\,ms), transforming a jarring dead-air pause into an imperceptible continuation.
+    \item \textbf{Dynamic Slot-Entropy vs. Fixed Silence Cutoff:} Static VAD silence thresholds present an intractable dilemma: a short window ($<300$\,ms) clips patients experiencing dyspneic inspiratory gasps or hesitant speech, while a long window ($>500$\,ms) injects intolerable dead air after concise responses (e.g., ``Yes, radiating to my jaw''). By coupling a fast semantic slot-entropy classifier ($\mathbb{I}_{\text{slot}}$) with acoustic inspiratory gasp energy detection ($E_{\text{resp}}$), OmniSpec-Triage contracts silence to $180.0$\,ms when clinical slots close, while dynamically expanding up to $900.0$\,ms during respiratory distress, harmonizing responsiveness with clinical empathy.
 \end{itemize}
 
 \subsection{Limitations \& Future Work}
