@@ -26,22 +26,31 @@ from eval.core.regression_detector import (
 def main():
     parser = argparse.ArgumentParser(description="Master Evaluation Suite")
     parser.add_argument("--config", default="config.yaml", help="Path to config.yaml")
-    parser.add_argument("--dataset", default="eval/data/clinical_vignettes_60.json", help="Path to clinical dataset")
+    parser.add_argument("--dataset", default=None, help="Path to clinical dataset")
+    parser.add_argument("--diverse", action="store_true", help="Run expanded 120-vignette diverse clinical benchmark suite")
     parser.add_argument("--cases", type=int, default=10, help="Number of clinical cases to benchmark")
     parser.add_argument("--delay", type=float, default=1.5, help="Simulated speaking delay in seconds")
     parser.add_argument("--tag", default="eval", help="Evaluation campaign tag")
     args = parser.parse_args()
 
+    dataset_path = args.dataset
+    if not dataset_path:
+        if args.diverse:
+            dataset_path = "eval/data/clinical_vignettes_120_diverse.json"
+        else:
+            dataset_path = "eval/data/clinical_vignettes_60.json"
+
     print("\n" + "=" * 80)
     print(" 🚀 STARTING OMNISPEC-TRIAGE MASTER BENCHMARK SUITE")
     print(f" Timestamp: {datetime.datetime.now().isoformat()} | Cases: {args.cases}")
+    print(f" Dataset  : {dataset_path}")
     print("=" * 80)
 
     # 1. Run Sequential Baseline
     print("\n>>> STEP 1/2: Executing Sequential Baseline Pipeline...")
     baseline_summary = run_pipeline_benchmark(
         config_path=args.config,
-        dataset_path=args.dataset,
+        dataset_path=dataset_path,
         mode="sequential",
         max_cases=args.cases,
         tag=f"{args.tag}_baseline",
@@ -52,7 +61,7 @@ def main():
     print("\n>>> STEP 2/2: Executing Speculative Pipeline...")
     candidate_summary = run_pipeline_benchmark(
         config_path=args.config,
-        dataset_path=args.dataset,
+        dataset_path=dataset_path,
         mode="speculative",
         max_cases=args.cases,
         tag=f"{args.tag}_speculative",

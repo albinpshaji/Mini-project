@@ -105,6 +105,72 @@ MULTITURN_CLINICAL_PROFILES = [
             # Turn 12 (Needle Retrieval)
             "Summarize my injury, blood thinner medication, and antibiotic allergies for the orthopedic surgeon."
         ]
+    },
+    {
+        "patient_id": "patient_04_pediatric",
+        "category": "Pediatric Emergency & Croup / Stridor",
+        "needle_entities": ["amoxicillin", "stridor", "barking cough", "toddler", "103f", "steroids"],
+        "turns": [
+            # Turn 1 (Needle Insertion)
+            "My 18-month-old toddler has had a seal-like barking cough and high-pitched inspiratory stridor that woke him up tonight. Temperature is 103F. He is allergic to Amoxicillin and takes nebulized Budesonide steroids.",
+            # Turns 2-11 (Extended intake)
+            "He is crying and breathing very fast, around 50 breaths a minute.",
+            "When he breathes in, his chest pulls in below his ribs.",
+            "No vomiting, but he refused to drink his bottle tonight.",
+            "He attended daycare yesterday where several children had colds.",
+            "I tried sitting with him in the steamy bathroom for 15 minutes, but the barking cough didn't stop.",
+            "He doesn't have any rash or swelling on his face or lips.",
+            "His immunizations are all up to date according to his pediatrician.",
+            "He is sitting upright on my lap right now.",
+            "His hands feel a little cool, but his forehead is burning hot.",
+            "Can a pediatric doctor check his throat and oxygen level soon?",
+            # Turn 12 (Needle Retrieval)
+            "Please verify what you have on file regarding his antibiotic allergy, steroid inhaler, temperature, and stridor symptoms for the pediatric team."
+        ]
+    },
+    {
+        "patient_id": "patient_05_geriatric",
+        "category": "Geriatric Polypharmacy & Acute Sepsis / Dehydration",
+        "needle_entities": ["metformin", "lisinopril", "hypotension", "confusion", "sulfa", "cloudy urine"],
+        "turns": [
+            # Turn 1 (Needle Insertion)
+            "My 82-year-old mother is acutely confused and severely lethargic today. Her blood pressure is 85/50, heart rate 115 bpm, and she has foul-smelling cloudy urine. She takes Metformin and Lisinopril, and has a severe allergy to Sulfa antibiotics.",
+            # Turns 2-11 (Extended intake)
+            "She was completely alert and doing crossword puzzles two days ago.",
+            "Her temperature at home was 102.4F with uncontrollable shivering.",
+            "She hasn't been able to drink water since yesterday morning due to nausea.",
+            "She had a hip replacement four years ago, but has had no recent falls.",
+            "Her skin looks mottled and pale on her knees and hands.",
+            "She takes Atorvastatin for cholesterol and Omeprazole for acid reflux.",
+            "She tried to stand up an hour ago and nearly collapsed from dizziness.",
+            "She is currently resting in a transport wheelchair beside me.",
+            "No coughing or shortness of breath, just extreme weakness and confusion.",
+            "Does she need immediate IV fluids and blood work in resuscitation?",
+            # Turn 12 (Needle Retrieval)
+            "Please confirm what you have recorded about her low blood pressure, antibiotic allergies, diabetes medication, and altered mental status."
+        ]
+    },
+    {
+        "patient_id": "patient_06_toxicology",
+        "category": "Acute Toxic Ingestion & Polypharmacy Overdose",
+        "needle_entities": ["acetaminophen", "codeine", "overdose", "15 grams", "vomiting", "penicillin"],
+        "turns": [
+            # Turn 1 (Needle Insertion)
+            "My roommate intentionally swallowed an entire 30-tablet bottle of extra strength Tylenol with Codeine (around 15 grams of Acetaminophen) about 2 hours ago. He is now vomiting and severely drowsy. He has an allergy to Penicillin.",
+            # Turns 2-11 (Extended intake)
+            "The empty bottle was found in the bathroom next to his bed.",
+            "He complained of upper right abdominal pain right before vomiting.",
+            "He also drank three beers earlier this evening with the pills.",
+            "His breathing is shallow and slow, around 8 breaths per minute.",
+            "He is having difficulty keeping his eyes open when I speak to him.",
+            "He has no previous history of overdose or intentional self-harm.",
+            "He does not take any regular prescription medications daily.",
+            "I brought the empty medication pill bottle with me in my jacket pocket.",
+            "His pupils look somewhat small and pinpoint in the light.",
+            "Can someone administer Naloxone or start an N-acetylcysteine infusion right away?",
+            # Turn 12 (Needle Retrieval)
+            "What information about the ingested acetaminophen dose, codeine symptoms, and allergies have you passed to the emergency toxicology team?"
+        ]
     }
 ]
 
@@ -194,6 +260,7 @@ def run_multiturn_benchmark(
     export_dir: str = "eval/results/runs",
     turns_per_patient: int = 12,
     db_path: str = "eval/results/history.db",
+    max_patients: int = None,
 ):
     print("=" * 90)
     print("🚀 OMNISPEC-TRIAGE PHASE 5: SNAPKV ATTENTION ANCHOR PRUNING & MULTI-TURN BENCHMARK")
@@ -228,8 +295,9 @@ def run_multiturn_benchmark(
     cfg_compressed["snapkv_trigger_turn_threshold"] = 4
     engine_compressed = SLMEngine(cfg_compressed)
 
+    profiles = MULTITURN_CLINICAL_PROFILES[:max_patients] if max_patients else MULTITURN_CLINICAL_PROFILES
     print(f"📌 Active Model: {model_name} | Hardware Target: NVIDIA GTX 1650 (4GB VRAM)")
-    print(f"📌 Profiles Evaluated: {len(MULTITURN_CLINICAL_PROFILES)} clinical encounters ({turns_per_patient} turns each)")
+    print(f"📌 Profiles Evaluated: {len(profiles)} clinical encounters ({turns_per_patient} turns each)")
     print("-" * 90)
 
     all_turn_records = []
@@ -242,7 +310,7 @@ def run_multiturn_benchmark(
     needle_matches_found = 0
     total_needle_entities = 0
 
-    for patient in MULTITURN_CLINICAL_PROFILES:
+    for patient in profiles:
         p_id = patient["patient_id"]
         category = patient["category"]
         needle_entities = patient["needle_entities"]
@@ -414,6 +482,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run Phase 5 SnapKV Multi-Turn Benchmark")
     parser.add_argument("--config", default="config.yaml", help="Path to config.yaml")
     parser.add_argument("--turns", type=int, default=12, help="Number of turns per patient profile")
+    parser.add_argument("--patients", type=int, default=None, help="Number of patient profiles to evaluate (default: all 6)")
     parser.add_argument("--export-dir", default="eval/results/runs", help="Directory for benchmark runs")
     parser.add_argument("--db-path", default="eval/results/history.db", help="SQLite history database")
     args = parser.parse_args()
@@ -423,4 +492,5 @@ if __name__ == "__main__":
         export_dir=args.export_dir,
         turns_per_patient=args.turns,
         db_path=args.db_path,
+        max_patients=args.patients,
     )

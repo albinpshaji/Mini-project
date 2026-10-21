@@ -139,6 +139,69 @@ INVARIANT_TEST_CASES = [
         "expected_reason": "polarity_mismatch",
         "clinical_significance": "Detects clinical denial token"
     },
+    {
+        "id": "neg_09",
+        "category": "polarity_shift",
+        "partial": "child is coughing frequently",
+        "final": "child has not stopped coughing",
+        "expected_diverged": True,
+        "expected_reason": "polarity_mismatch",
+        "clinical_significance": "Pediatric status flip: intermittent to intractable coughing"
+    },
+    {
+        "id": "neg_10",
+        "category": "polarity_shift",
+        "partial": "I took my prescribed medicine",
+        "final": "I have not taken my medicine",
+        "expected_diverged": True,
+        "expected_reason": "polarity_mismatch",
+        "clinical_significance": "Medication compliance negation flip"
+    },
+    {
+        "id": "neg_11",
+        "category": "polarity_shift",
+        "partial": "there is active bleeding from the wound",
+        "final": "there is zero bleeding from the wound",
+        "expected_diverged": True,
+        "expected_reason": "polarity_mismatch",
+        "clinical_significance": "Hemorrhage cessation inversion"
+    },
+    {
+        "id": "neg_12",
+        "category": "polarity_shift",
+        "partial": "the infant is responsive and crying",
+        "final": "the infant is hardly responsive",
+        "expected_diverged": True,
+        "expected_reason": "polarity_mismatch",
+        "clinical_significance": "Pediatric emergency: alert status flipped to obtunded"
+    },
+    {
+        "id": "neg_13",
+        "category": "polarity_shift",
+        "partial": "my vision is blurry",
+        "final": "my visual changes resolved completely",
+        "expected_diverged": True,
+        "expected_reason": "polarity_mismatch",
+        "clinical_significance": "Ophthalmic/neurological symptom resolution flip"
+    },
+    {
+        "id": "neg_14",
+        "category": "polarity_shift",
+        "partial": "I swallowed the chemical cleaner",
+        "final": "I did not swallow the chemical cleaner",
+        "expected_diverged": True,
+        "expected_reason": "polarity_mismatch",
+        "clinical_significance": "Toxic ingestion false alarm prevention"
+    },
+    {
+        "id": "neg_15",
+        "category": "polarity_shift",
+        "partial": "experienced seizure at home",
+        "final": "never experienced seizure at home",
+        "expected_diverged": True,
+        "expected_reason": "polarity_mismatch",
+        "clinical_significance": "Neurological history negation flip"
+    },
 
     # --- Category 2: Critical Anatomical & Emergency Keyword Shifts (Must Rollback) ---
     {
@@ -185,6 +248,96 @@ INVARIANT_TEST_CASES = [
         "expected_diverged": True,
         "expected_reason": "critical_entity_mismatch",
         "clinical_significance": "Localized reaction progressed to anaphylaxis"
+    },
+    {
+        "id": "crit_06",
+        "category": "critical_entity_shift",
+        "partial": "I have a sore neck and back",
+        "final": "I have a severe injury to my head",
+        "expected_diverged": True,
+        "expected_reason": "critical_entity_mismatch",
+        "clinical_significance": "Musculoskeletal strain mutated to acute head trauma"
+    },
+    {
+        "id": "crit_07",
+        "category": "critical_entity_shift",
+        "partial": "feeling tired and drowsy",
+        "final": "patient had a sudden collapse in the hallway",
+        "expected_diverged": True,
+        "expected_reason": "critical_entity_mismatch",
+        "clinical_significance": "Fatigue mutated to syncopal collapse"
+    },
+    {
+        "id": "crit_08",
+        "category": "critical_entity_shift",
+        "partial": "took extra vitamin supplements",
+        "final": "suspected accidental opioid overdose",
+        "expected_diverged": True,
+        "expected_reason": "critical_entity_mismatch",
+        "clinical_significance": "Benign ingestion mutated to toxicological overdose"
+    },
+    {
+        "id": "crit_09",
+        "category": "critical_entity_shift",
+        "partial": "difficulty walking due to knee pain",
+        "final": "sudden left side paralysis after waking",
+        "expected_diverged": True,
+        "expected_reason": "critical_entity_mismatch",
+        "clinical_significance": "Orthopedic limitation mutated to hemiplegia"
+    },
+    {
+        "id": "crit_10",
+        "category": "critical_entity_shift",
+        "partial": "stuffy nose and congestion",
+        "final": "swelling causing severe airway obstruction",
+        "expected_diverged": True,
+        "expected_reason": "critical_entity_mismatch",
+        "clinical_significance": "Upper respiratory cold mutated to critical airway emergency"
+    },
+    {
+        "id": "crit_11",
+        "category": "critical_entity_shift",
+        "partial": "patient fell and bumped their elbow",
+        "final": "patient fell and is now unconscious",
+        "expected_diverged": True,
+        "expected_reason": "critical_entity_mismatch",
+        "clinical_significance": "Minor contusion mutated to loss of consciousness"
+    },
+    {
+        "id": "crit_12",
+        "category": "critical_entity_shift",
+        "partial": "I feel a slight ache in my shoulder",
+        "final": "crushing pain radiating across my chest",
+        "expected_diverged": True,
+        "expected_reason": "critical_entity_mismatch",
+        "clinical_significance": "Deltoid ache mutated to acute myocardial infarction"
+    },
+    {
+        "id": "crit_13",
+        "category": "critical_entity_shift",
+        "partial": "shallow gasping and wheezing",
+        "final": "gasping for breath and turning blue",
+        "expected_diverged": True,
+        "expected_reason": "critical_entity_mismatch",
+        "clinical_significance": "Mild wheezing mutated to hypoxic respiratory arrest"
+    },
+    {
+        "id": "crit_14",
+        "category": "critical_entity_shift",
+        "partial": "I have a rash on my stomach",
+        "final": "rash with swelling and severe anaphylaxis",
+        "expected_diverged": True,
+        "expected_reason": "critical_entity_mismatch",
+        "clinical_significance": "Dermatologic rash mutated to systemic anaphylaxis"
+    },
+    {
+        "id": "crit_15",
+        "category": "critical_entity_shift",
+        "partial": "cut my finger while cooking",
+        "final": "deep wound with active bleeding that is serious",
+        "expected_diverged": True,
+        "expected_reason": "critical_entity_mismatch",
+        "clinical_significance": "Minor laceration mutated to severe arterial bleeding"
     },
 
     # --- Category 3: Benign Matching Prefixes (Safe Speculative Commits) ---
@@ -233,6 +386,51 @@ INVARIANT_TEST_CASES = [
         "expected_reason": "passed",
         "clinical_significance": "Safe commit on trauma narrative"
     },
+    {
+        "id": "safe_06",
+        "category": "safe_commit",
+        "partial": "rash on both elbows",
+        "final": "rash on both elbows and knees",
+        "expected_diverged": False,
+        "expected_reason": "passed",
+        "clinical_significance": "Anatomical clause expansion with high lexical overlap"
+    },
+    {
+        "id": "safe_07",
+        "category": "safe_commit",
+        "partial": "burning sensation when urinating",
+        "final": "burning sensation when urinating today",
+        "expected_diverged": False,
+        "expected_reason": "passed",
+        "clinical_significance": "Dysuria complaint with temporal qualifier completion"
+    },
+    {
+        "id": "safe_08",
+        "category": "safe_commit",
+        "partial": "twisted knee while playing tennis",
+        "final": "twisted right knee while playing tennis",
+        "expected_diverged": False,
+        "expected_reason": "passed",
+        "clinical_significance": "Sports injury narrative with lateral specificity"
+    },
+    {
+        "id": "safe_09",
+        "category": "safe_commit",
+        "partial": "child has an earache since yesterday",
+        "final": "child has an earache since yesterday morning",
+        "expected_diverged": False,
+        "expected_reason": "passed",
+        "clinical_significance": "Pediatric otalgia narrative with temporal expansion"
+    },
+    {
+        "id": "safe_10",
+        "category": "safe_commit",
+        "partial": "dry cough and stuffy nose",
+        "final": "dry cough and stuffy nose today",
+        "expected_diverged": False,
+        "expected_reason": "passed",
+        "clinical_significance": "Upper respiratory viral presentation hypothesis completion"
+    },
 
     # --- Category 4: Low-Similarity Divergences (Standard Lexical Rollback) ---
     {
@@ -252,6 +450,33 @@ INVARIANT_TEST_CASES = [
         "expected_diverged": True,
         "expected_reason": "low_similarity",
         "clinical_significance": "Logistical question replaced by acute pain complaint"
+    },
+    {
+        "id": "lex_03",
+        "category": "low_similarity",
+        "partial": "Can I get some water please",
+        "final": "My stomach has been hurting since yesterday",
+        "expected_diverged": True,
+        "expected_reason": "low_similarity",
+        "clinical_significance": "Thirst request replaced by gastrointestinal complaint"
+    },
+    {
+        "id": "lex_04",
+        "category": "low_similarity",
+        "partial": "Where is the registration desk located",
+        "final": "I twisted my ankle playing soccer in the park",
+        "expected_diverged": True,
+        "expected_reason": "low_similarity",
+        "clinical_significance": "Wayfinding inquiry replaced by musculoskeletal injury"
+    },
+    {
+        "id": "lex_05",
+        "category": "low_similarity",
+        "partial": "I parked my car outside",
+        "final": "My right index finger is swollen and painful",
+        "expected_diverged": True,
+        "expected_reason": "low_similarity",
+        "clinical_significance": "Parking comment replaced by acute localized digital pain"
     },
 ]
 

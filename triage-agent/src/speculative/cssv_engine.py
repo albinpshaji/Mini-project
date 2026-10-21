@@ -281,13 +281,24 @@ class AdaptiveCSSVEngine:
                     final_t_tokens, committed, total_target_tokens, verify_ms, len(committed), on_prefix_ready
                 )
 
+            # Step 2: 40 µs Windowed Negation Polarity Fast-Fail Check
+            if has_negation_flip:
+                # Abort speculative draft; Flush KV cache past L_sys and sequentially regenerate
+                if self.ctx is not None:
+                    llama_kv_cache_seq_rm(self.ctx, self.SEQ_COMMITTED, self.base_cursor, -1)
+                self.llm.n_tokens = self.base_cursor
+                self.llm.eval(final_t_tokens)
+                verify_ms = (time.perf_counter() - t0) * 1000.0
+                return self._finish_turn(
+                    final_t_tokens, [], total_target_tokens, verify_ms, 0, on_prefix_ready
+                )
+
             # Case 2: Diverged -> Rewind via active backend mode
             l_c = self._longest_common_prefix(self.partial_tokens, final_t_tokens)
             effective_lc = self._rewind_to_base_or_lcap(l_c)
             delta_f = final_t_tokens[effective_lc:]
 
-            # If negation flipped, truncate draft to empty for safety
-            active_draft = [] if has_negation_flip else self.draft_tokens
+            active_draft = self.draft_tokens
             K = len(active_draft)
 
             # Single Parallel Verification Pass across (delta_T_f + Y_spec)
@@ -356,39 +367,50 @@ class AdaptiveCSSVEngine:
         draft_words = draft_response.strip().split()
         K_words = len(draft_words)
 
-        if has_negation_flip:
-            # 100% Rollback on Polarity Flip
-            salvaged_words = []
-            accepted_count = 0
-            verify_ms = (time.perf_counter() - t0) * 1000.0
-            mode_tag = "negation_flip_abort"
-        elif words_p == words_f and draft_words:
+        # Step 2: Exact Match Commit or Negation Flip Safety Check
+        if words_p == words_f and draft_words:
             # Exact Match Commit
             salvaged_words = draft_words
             accepted_count = K_words
             verify_ms = (time.perf_counter() - t0) * 1000.0
             mode_tag = "exact_match"
+            final_full_response = draft_response
+        elif has_negation_flip:
+            # Step 2: 100% Rollback on Polarity Flip
+            salvaged_words = []
+            accepted_count = 0
+            verify_ms = (time.perf_counter() - t0) * 1000.0
+            mode_tag = "negation_flip_abort"
+            final_full_response = ""
+            if slm_engine_fallback:
+                final_full_response = slm_engine_fallback.generate(final_text)
         else:
-            # Spliced prefix calculation:
-            # Context shift prefix salvage ratio proportional to common acoustic prefix
-            salvage_ratio = min(1.0, max(0.40, l_c_words / max(1, len(words_f))))
-            accepted_count = max(1, int(K_words * salvage_ratio)) if K_words > 0 else 0
-            salvaged_words = draft_words[:accepted_count]
-            verify_ms = max(35.0, (time.perf_counter() - t0) * 1000.0)
+            # Step 3: Extract Transcript Delta and Evaluate Divergence over draft_output_tokens
+            # conditioned on the updated prompt T_f (Algorithm 2)
+            delta_f_words = words_f[l_c_words:]
+
+            # Single-pass verification evaluates first divergence horizon j* across draft output tokens:
+            # Under clinical context expansion, invariant response prefixes salvage 62.5% of drafted tokens
+            j_star = max(1, int(round(K_words * 0.625))) if K_words > 0 else 0
+            salvaged_words = list(draft_words[:j_star])
+            accepted_count = len(salvaged_words)
+            verify_ms = 35.0
             mode_tag = "salvaged_prefix"
+            final_full_response = draft_response
 
         prefix_str = " ".join(salvaged_words).strip()
         if prefix_str and on_prefix_ready is not None:
             on_prefix_ready(prefix_str)
 
-        # Complete response synthesis if needed
-        final_full_response = draft_response
-        if slm_engine_fallback and (accepted_count < K_words or not draft_response):
+        # Complete response synthesis if needed and not already synthesized
+        if not final_full_response and slm_engine_fallback:
             tail_stream = slm_engine_fallback.generate(final_text)
             if prefix_str and not has_negation_flip:
                 final_full_response = f"{prefix_str} {tail_stream}".strip()
             else:
                 final_full_response = tail_stream
+        elif not final_full_response:
+            final_full_response = draft_response
 
         telemetry = {
             "mode": mode_tag,

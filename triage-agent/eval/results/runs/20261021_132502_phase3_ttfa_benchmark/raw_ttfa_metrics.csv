@@ -1,0 +1,11 @@
+case_id,category,ttft_ms,baseline_ttfa_ms,phase3_ttfa_ms,speedup,is_prewarmed,first_chunk_text,lead_margin_ms,underrun,num_chunks
+cardiac_01,cardiac,911.87,1004.21,1004.21,1.0,False,You should go to the,678.45,False,3
+cardiac_02,cardiac,904.49,973.04,904.54,1.08,True,This sounds like a medical,2290.89,False,3
+cardiac_03,cardiac,659.19,2235.0,2166.5,1.03,True,That sounds quite serious,2439.86,False,2
+cardiac_04,cardiac,663.95,2197.94,2129.44,1.03,True,That sounds very serious,2490.39,False,2
+cardiac_05,cardiac,634.24,1909.85,1841.35,1.04,True,That sounds concerning,2477.58,False,2
+cardiac_06,cardiac,822.52,891.06,822.56,1.08,True,That sounds like a skipped,2759.65,False,3
+cardiac_07,cardiac,833.91,902.45,833.95,1.08,True,That sounds like a muscle,2763.54,False,3
+cardiac_08,cardiac,923.37,991.92,923.42,1.07,True,That sounds like it could,2740.29,False,3
+cardiac_09,cardiac,756.17,1542.24,1542.24,1.0,False,Okay,439.24,False,2
+cardiac_10,cardiac,655.04,2179.48,2110.98,1.03,True,That sounds very serious,2348.54,False,2

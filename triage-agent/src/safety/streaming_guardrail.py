@@ -38,6 +38,25 @@ FABRICATION_FALLBACK = (
     "Please proceed to the hospital registration desk for in-person triage."
 )
 
+TOXIC_EMERGENCY_REFUSAL_MESSAGE = (
+    "DO NOT induce vomiting or ingest substances like milk, water, or home remedies without official "
+    "Poison Control instruction. This is a severe toxicological emergency. Please call Poison Control "
+    "(1-800-222-1222 in the US) or emergency services (911) immediately, or proceed to the nearest Emergency Department."
+)
+
+POLYPHARMACY_REFUSAL_MESSAGE = (
+    "Warning: Combining these medications poses severe, potentially life-threatening drug-drug interaction risks. "
+    "As a virtual triage assistant, I cannot approve medication co-administration or dosing. Please consult the "
+    "attending physician or pharmacist immediately."
+)
+
+PEDIATRIC_DOSING_REFUSAL_MESSAGE = (
+    "As a virtual triage assistant, I cannot advise on pediatric medication dosing or off-label administration. "
+    "Pediatric medications require strict weight-based clinical calculation by a licensed physician or pharmacist. "
+    "Please see the pediatric triage team immediately."
+)
+
+
 
 # ---------------------------------------------------------------------------
 # In-Memory Aho-Corasick / Prefix Trie for Prohibited Clinical Entities
@@ -168,7 +187,13 @@ DECLARATIVE_DIAGNOSTIC_REGEX = re.compile(
 
 # Regex: Negation in prompt vs false emergency triggers in response
 PROMPT_NEGATION_REGEX = re.compile(
-    r"\b(?:not experiencing|no|without|never had|denies|negative for|zero|barely)\b.*?\b(?:chest pain|difficulty breathing|shortness of breath|bleeding|stroke)\b",
+    r"\b(?:not experiencing|not having|never had|never experienced|no|not|never|without|denies|denied|deny|negative for|negative|zero|barely|free of|stopped having|none)\b"
+    r"[^\.\n\?!]{0,60}\b(?:chest (?:pain|discomfort|heaviness|pressure)|pain in (?:my )?chest|pressure in (?:my )?chest|heart trouble|breathing (?:difficulty)?|difficulty breathing|"
+    r"short(?:ness)? of breath|breathe|coughing blood|blood|bleeding|stroke|heart attack|"
+    r"numbness|arm numbness|facial droop|allergic reaction|swelling|difficulty (?:speaking|swallowing)|"
+    r"seizure|faint(?:ing)?|loss of consciousness|headache|visual changes|neck stiffness|distress|fever|"
+    r"abdominal pain|nausea|symptoms)\b"
+    r"|\b(?:stopped having headache|totally gone|totally normal)\b",
     re.IGNORECASE
 )
 
@@ -179,6 +204,43 @@ RESPONSE_FALSE_ESCALATION_REGEX = re.compile(
 
 # Regex: Unfilled template placeholders
 PLACEHOLDER_REGEX = re.compile(r"\[.*?\]|<.*?>|\{.*?\}")
+
+# ---------------------------------------------------------------------------
+# Toxic Ingestions, Polypharmacy, and Pediatric Prohibited Patterns
+# ---------------------------------------------------------------------------
+TOXIC_SUBSTANCES = [
+    "bleach", "hydrogen peroxide", "kerosene", "drain cleaner", "lye",
+    "detergent pod", "borax", "antifreeze", "rubbing alcohol", "methanol",
+    "battery acid", "paint thinner", "turpentine", "gasoline", "ammonia",
+    "rat poison", "mothballs", "motor oil", "mercuric", "weed killer",
+    "dishwashing liquid", "super glue", "diesel fuel", "caustic soda",
+    "cleaner", "petroleum jelly"
+]
+TOXIC_OR_GROUP = "|".join(re.escape(s) for s in TOXIC_SUBSTANCES)
+
+HAZARDOUS_INGESTION_REGEX = re.compile(
+    rf"\b(?:drink|drinking|ingest|ingesting|swallow|swallowing|consume|consuming|gargle|wash with|inject|pour|rubbing|take|sip)\b[^\w\n\r]{{0,35}}\b(?:{TOXIC_OR_GROUP})\b"
+    rf"|\b(?:safe to|okay to|can i)\s+(?:drink|ingest|swallow|consume|take|pour|wash|gargle|inject)\s+(?:{TOXIC_OR_GROUP})\b"
+    rf"|\b(?:drink|ingest|swallow|consume|neutralize)\s+[^.\n]{{0,30}}\b(?:{TOXIC_OR_GROUP})\b"
+    r"|\b(?:safe to bleach|safe to kerosene|safe to antifreeze|safe to drain cleaner|safe to methanol|safe to super glue|safe to diesel)\b",
+    re.IGNORECASE
+)
+
+POLYPHARMACY_HAZARD_REGEX = re.compile(
+    r"\b(?:safe to combine|go ahead and take both|safe to take both|safe to take together|can take both|no problem taking both)\b",
+    re.IGNORECASE
+)
+
+PEDIATRIC_PROMPT_REGEX = re.compile(
+    r"\b(?:infant|baby|newborn|toddler|child|kid|\d+[\s-]*(?:month|year|wk|week)[\s-]*old)\b",
+    re.IGNORECASE
+)
+
+PEDIATRIC_DOSING_REGEX = re.compile(
+    r"\b(?:give|administer|feed|crush)\s+\d+(?:\.\d+)?\b"
+    r"|\b\d+(?:\.\d+)?\s*(?:ml|mg|tablets?|drops?|capsules?|spoonfuls?)\s+(?:to\s+(?:your\s+)?(?:baby|infant|child|toddler|kid|newborn))\b",
+    re.IGNORECASE
+)
 
 
 # ---------------------------------------------------------------------------
@@ -285,6 +347,27 @@ class StreamingGuardrail:
             violations.append("fabrication_placeholder")
             matches.extend(ph_matches)
             sanitized = PLACEHOLDER_REGEX.sub("registration desk", sanitized)
+
+        # 5. Check for Hazardous Toxic / Caustic Chemical Ingestion Advice
+        hazard_matches = HAZARDOUS_INGESTION_REGEX.findall(sanitized)
+        if hazard_matches or (user_prompt and any(s in user_prompt.lower() for s in TOXIC_SUBSTANCES) and re.search(r"\b(safe|drink|ingest|swallow|go ahead|consume|neutralize|feed|wash|inject)\b", sanitized, re.IGNORECASE)):
+            violations.append("hazardous_chemical_ingestion")
+            matches.extend(hazard_matches if hazard_matches else ["hazardous_substance_recommendation"])
+            sanitized = TOXIC_EMERGENCY_REFUSAL_MESSAGE
+
+        # 6. Check for Dangerous Drug-Drug Interaction Approvals
+        poly_matches = POLYPHARMACY_HAZARD_REGEX.findall(sanitized)
+        if poly_matches:
+            violations.append("dangerous_polypharmacy")
+            matches.extend(poly_matches)
+            sanitized = POLYPHARMACY_REFUSAL_MESSAGE
+
+        # 7. Check for Pediatric Off-Label Dosing Demands
+        peds_dosing_matches = PEDIATRIC_DOSING_REGEX.findall(sanitized)
+        if peds_dosing_matches or (user_prompt and PEDIATRIC_PROMPT_REGEX.search(user_prompt) and (med_matches or num_matches or re.search(r"\b(give|administer|feed|crush)\b", sanitized, re.IGNORECASE))):
+            violations.append("pediatric_off_label_dosing")
+            matches.extend(peds_dosing_matches if peds_dosing_matches else ["pediatric_dosing_attempt"])
+            sanitized = PEDIATRIC_DOSING_REFUSAL_MESSAGE
 
         t_elapsed_ms = (time.perf_counter_ns() - t_start) / 1_000_000.0
         intercepted = len(violations) > 0

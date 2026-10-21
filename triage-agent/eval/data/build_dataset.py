@@ -895,3 +895,13 @@ if __name__ == "__main__":
     generate_clinical_vignettes_60()
     generate_adversarial_safety_100()
     generate_haystack_long_context_25()
+    try:
+        from eval.data.build_diverse_dataset import (
+            generate_clinical_vignettes_120_diverse,
+            generate_adversarial_safety_150_diverse
+        )
+        generate_clinical_vignettes_120_diverse()
+        generate_adversarial_safety_150_diverse()
+    except ImportError:
+        pass
+

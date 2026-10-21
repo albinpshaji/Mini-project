@@ -1,0 +1,25 @@
+{
+  "run_id": "ttfa_20261021_132502",
+  "timestamp": "2026-10-21T13:25:24.703288",
+  "phase": "Phase 3/4: Acoustic Pre-Warming & Pipelined TTFA",
+  "branch": "feature/lookahead-speculation-phase4",
+  "model_name": "qwen3.5:4b",
+  "cases_evaluated": 10,
+  "ttfa": {
+    "baseline_mean_ms": 1482.72,
+    "baseline_median_ms": 1273.23,
+    "mean_ms": 1427.92,
+    "median_ms": 1273.23,
+    "p90_ms": 2162.79,
+    "cold_turn_ms": 77.84
+  },
+  "underruns": {
+    "underrun_count": 0,
+    "underrun_rate_percent": 0.0,
+    "mean_lead_margin_ms": 2142.84
+  },
+  "opener_hit_rate_percent": 80.0,
+  "speedup_vs_baseline": 1.04,
+  "summary_json_path": "eval/results/runs/20261021_132502_phase3_ttfa_benchmark/summary.json",
+  "raw_csv_path": "eval/results/runs/20261021_132502_phase3_ttfa_benchmark/raw_ttfa_metrics.csv"
+}

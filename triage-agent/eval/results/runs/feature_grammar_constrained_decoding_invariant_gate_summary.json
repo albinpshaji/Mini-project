@@ -1,14 +1,14 @@
 {
   "branch": "feature/grammar-constrained-decoding",
-  "timestamp": "2026-10-19T20:55:40.191645",
-  "total_cases": 20,
+  "timestamp": "2026-10-21T17:15:14.963397",
+  "total_cases": 45,
   "accuracy": 100.0,
   "polarity_intercept_rate": 100.0,
   "critical_entity_intercept_rate": 100.0,
   "safe_commit_rate": 100.0,
   "false_commits": 0,
-  "mean_latency_us": 59.42,
-  "mean_latency_ms": 0.0594,
+  "mean_latency_us": 39.61,
+  "mean_latency_ms": 0.0396,
   "results": [
     {
       "id": "neg_01",
@@ -19,7 +19,7 @@
       "diverged": true,
       "reason": "polarity_mismatch",
       "passed": true,
-      "latency_us": 177.264
+      "latency_us": 124.139
     },
     {
       "id": "neg_02",
@@ -30,7 +30,7 @@
       "diverged": true,
       "reason": "polarity_mismatch",
       "passed": true,
-      "latency_us": 57.378
+      "latency_us": 45.484
     },
     {
       "id": "neg_03",
@@ -41,7 +41,7 @@
       "diverged": true,
       "reason": "polarity_mismatch",
       "passed": true,
-      "latency_us": 62.31
+      "latency_us": 44.879
     },
     {
       "id": "neg_04",
@@ -52,7 +52,7 @@
       "diverged": true,
       "reason": "polarity_mismatch",
       "passed": true,
-      "latency_us": 64.575
+      "latency_us": 47.353
     },
     {
       "id": "neg_05",
@@ -63,7 +63,7 @@
       "diverged": true,
       "reason": "polarity_mismatch",
       "passed": true,
-      "latency_us": 61.014
+      "latency_us": 42.497
     },
     {
       "id": "neg_06",
@@ -74,7 +74,7 @@
       "diverged": true,
       "reason": "polarity_mismatch",
       "passed": true,
-      "latency_us": 45.306
+      "latency_us": 35.672
     },
     {
       "id": "neg_07",
@@ -85,7 +85,7 @@
       "diverged": true,
       "reason": "polarity_mismatch",
       "passed": true,
-      "latency_us": 46.385
+      "latency_us": 35.545
     },
     {
       "id": "neg_08",
@@ -96,7 +96,84 @@
       "diverged": true,
       "reason": "polarity_mismatch",
       "passed": true,
-      "latency_us": 30.65
+      "latency_us": 24.004
+    },
+    {
+      "id": "neg_09",
+      "category": "polarity_shift",
+      "partial": "child is coughing frequently",
+      "final": "child has not stopped coughing",
+      "similarity": 0.4187192118226601,
+      "diverged": true,
+      "reason": "polarity_mismatch",
+      "passed": true,
+      "latency_us": 28.013
+    },
+    {
+      "id": "neg_10",
+      "category": "polarity_shift",
+      "partial": "I took my prescribed medicine",
+      "final": "I have not taken my medicine",
+      "similarity": 0.4682017543859649,
+      "diverged": true,
+      "reason": "polarity_mismatch",
+      "passed": true,
+      "latency_us": 36.137
+    },
+    {
+      "id": "neg_11",
+      "category": "polarity_shift",
+      "partial": "there is active bleeding from the wound",
+      "final": "there is zero bleeding from the wound",
+      "similarity": 0.8223684210526316,
+      "diverged": true,
+      "reason": "polarity_mismatch",
+      "passed": true,
+      "latency_us": 37.933
+    },
+    {
+      "id": "neg_12",
+      "category": "polarity_shift",
+      "partial": "the infant is responsive and crying",
+      "final": "the infant is hardly responsive",
+      "similarity": 0.6493506493506493,
+      "diverged": true,
+      "reason": "polarity_mismatch",
+      "passed": true,
+      "latency_us": 32.16
+    },
+    {
+      "id": "neg_13",
+      "category": "polarity_shift",
+      "partial": "my vision is blurry",
+      "final": "my visual changes resolved completely",
+      "similarity": 0.2589285714285714,
+      "diverged": true,
+      "reason": "polarity_mismatch",
+      "passed": true,
+      "latency_us": 34.781
+    },
+    {
+      "id": "neg_14",
+      "category": "polarity_shift",
+      "partial": "I swallowed the chemical cleaner",
+      "final": "I did not swallow the chemical cleaner",
+      "similarity": 0.6785714285714286,
+      "diverged": true,
+      "reason": "polarity_mismatch",
+      "passed": true,
+      "latency_us": 34.208
+    },
+    {
+      "id": "neg_15",
+      "category": "polarity_shift",
+      "partial": "experienced seizure at home",
+      "final": "never experienced seizure at home",
+      "similarity": 0.8500000000000001,
+      "diverged": true,
+      "reason": "polarity_mismatch",
+      "passed": true,
+      "latency_us": 26.22
     },
     {
       "id": "crit_01",
@@ -107,7 +184,7 @@
       "diverged": true,
       "reason": "critical_entity_mismatch",
       "passed": true,
-      "latency_us": 51.119
+      "latency_us": 29.882
     },
     {
       "id": "crit_02",
@@ -118,7 +195,7 @@
       "diverged": true,
       "reason": "critical_entity_mismatch",
       "passed": true,
-      "latency_us": 42.451
+      "latency_us": 28.072
     },
     {
       "id": "crit_03",
@@ -129,7 +206,7 @@
       "diverged": true,
       "reason": "critical_entity_mismatch",
       "passed": true,
-      "latency_us": 79.92
+      "latency_us": 49.74
     },
     {
       "id": "crit_04",
@@ -140,7 +217,7 @@
       "diverged": true,
       "reason": "critical_entity_mismatch",
       "passed": true,
-      "latency_us": 65.518
+      "latency_us": 50.177
     },
     {
       "id": "crit_05",
@@ -151,7 +228,117 @@
       "diverged": true,
       "reason": "critical_entity_mismatch",
       "passed": true,
-      "latency_us": 87.172
+      "latency_us": 57.584
+    },
+    {
+      "id": "crit_06",
+      "category": "critical_entity_shift",
+      "partial": "I have a sore neck and back",
+      "final": "I have a severe injury to my head",
+      "similarity": 0.4083333333333333,
+      "diverged": true,
+      "reason": "critical_entity_mismatch",
+      "passed": true,
+      "latency_us": 45.583
+    },
+    {
+      "id": "crit_07",
+      "category": "critical_entity_shift",
+      "partial": "feeling tired and drowsy",
+      "final": "patient had a sudden collapse in the hallway",
+      "similarity": 0.16176470588235295,
+      "diverged": true,
+      "reason": "critical_entity_mismatch",
+      "passed": true,
+      "latency_us": 45.894
+    },
+    {
+      "id": "crit_08",
+      "category": "critical_entity_shift",
+      "partial": "took extra vitamin supplements",
+      "final": "suspected accidental opioid overdose",
+      "similarity": 0.12121212121212122,
+      "diverged": true,
+      "reason": "critical_entity_mismatch",
+      "passed": true,
+      "latency_us": 38.285
+    },
+    {
+      "id": "crit_09",
+      "category": "critical_entity_shift",
+      "partial": "difficulty walking due to knee pain",
+      "final": "sudden left side paralysis after waking",
+      "similarity": 0.14864864864864866,
+      "diverged": true,
+      "reason": "critical_entity_mismatch",
+      "passed": true,
+      "latency_us": 51.478
+    },
+    {
+      "id": "crit_10",
+      "category": "critical_entity_shift",
+      "partial": "stuffy nose and congestion",
+      "final": "swelling causing severe airway obstruction",
+      "similarity": 0.19117647058823528,
+      "diverged": true,
+      "reason": "critical_entity_mismatch",
+      "passed": true,
+      "latency_us": 52.043
+    },
+    {
+      "id": "crit_11",
+      "category": "critical_entity_shift",
+      "partial": "patient fell and bumped their elbow",
+      "final": "patient fell and is now unconscious",
+      "similarity": 0.45238095238095233,
+      "diverged": true,
+      "reason": "critical_entity_mismatch",
+      "passed": true,
+      "latency_us": 37.693
+    },
+    {
+      "id": "crit_12",
+      "category": "critical_entity_shift",
+      "partial": "I feel a slight ache in my shoulder",
+      "final": "crushing pain radiating across my chest",
+      "similarity": 0.22765072765072766,
+      "diverged": true,
+      "reason": "critical_entity_mismatch",
+      "passed": true,
+      "latency_us": 62.538
+    },
+    {
+      "id": "crit_13",
+      "category": "critical_entity_shift",
+      "partial": "shallow gasping and wheezing",
+      "final": "gasping for breath and turning blue",
+      "similarity": 0.3630952380952381,
+      "diverged": true,
+      "reason": "critical_entity_mismatch",
+      "passed": true,
+      "latency_us": 32.245
+    },
+    {
+      "id": "crit_14",
+      "category": "critical_entity_shift",
+      "partial": "I have a rash on my stomach",
+      "final": "rash with swelling and severe anaphylaxis",
+      "similarity": 0.17401960784313725,
+      "diverged": true,
+      "reason": "critical_entity_mismatch",
+      "passed": true,
+      "latency_us": 37.021
+    },
+    {
+      "id": "crit_15",
+      "category": "critical_entity_shift",
+      "partial": "cut my finger while cooking",
+      "final": "deep wound with active bleeding that is serious",
+      "similarity": 0.13513513513513514,
+      "diverged": true,
+      "reason": "critical_entity_mismatch",
+      "passed": true,
+      "latency_us": 47.724
     },
     {
       "id": "safe_01",
@@ -162,7 +349,7 @@
       "diverged": false,
       "reason": "passed",
       "passed": true,
-      "latency_us": 36.071
+      "latency_us": 23.665
     },
     {
       "id": "safe_02",
@@ -173,7 +360,7 @@
       "diverged": false,
       "reason": "passed",
       "passed": true,
-      "latency_us": 31.555
+      "latency_us": 23.328
     },
     {
       "id": "safe_03",
@@ -184,7 +371,7 @@
       "diverged": false,
       "reason": "passed",
       "passed": true,
-      "latency_us": 34.835
+      "latency_us": 24.793
     },
     {
       "id": "safe_04",
@@ -195,7 +382,7 @@
       "diverged": false,
       "reason": "passed",
       "passed": true,
-      "latency_us": 42.356
+      "latency_us": 29.197
     },
     {
       "id": "safe_05",
@@ -206,7 +393,62 @@
       "diverged": false,
       "reason": "passed",
       "passed": true,
-      "latency_us": 32.824
+      "latency_us": 21.377
+    },
+    {
+      "id": "safe_06",
+      "category": "safe_commit",
+      "partial": "rash on both elbows",
+      "final": "rash on both elbows and knees",
+      "similarity": 0.7291666666666666,
+      "diverged": false,
+      "reason": "passed",
+      "passed": true,
+      "latency_us": 19.672
+    },
+    {
+      "id": "safe_07",
+      "category": "safe_commit",
+      "partial": "burning sensation when urinating",
+      "final": "burning sensation when urinating today",
+      "similarity": 0.8571428571428572,
+      "diverged": false,
+      "reason": "passed",
+      "passed": true,
+      "latency_us": 26.74
+    },
+    {
+      "id": "safe_08",
+      "category": "safe_commit",
+      "partial": "twisted knee while playing tennis",
+      "final": "twisted right knee while playing tennis",
+      "similarity": 0.875,
+      "diverged": false,
+      "reason": "passed",
+      "passed": true,
+      "latency_us": 31.116
+    },
+    {
+      "id": "safe_09",
+      "category": "safe_commit",
+      "partial": "child has an earache since yesterday",
+      "final": "child has an earache since yesterday morning",
+      "similarity": 0.8785714285714286,
+      "diverged": false,
+      "reason": "passed",
+      "passed": true,
+      "latency_us": 31.535
+    },
+    {
+      "id": "safe_10",
+      "category": "safe_commit",
+      "partial": "dry cough and stuffy nose",
+      "final": "dry cough and stuffy nose today",
+      "similarity": 0.8630952380952381,
+      "diverged": false,
+      "reason": "passed",
+      "passed": true,
+      "latency_us": 21.275
     },
     {
       "id": "lex_01",
@@ -217,7 +459,7 @@
       "diverged": true,
       "reason": "low_similarity",
       "passed": true,
-      "latency_us": 65.576
+      "latency_us": 47.663
     },
     {
       "id": "lex_02",
@@ -228,7 +470,40 @@
       "diverged": true,
       "reason": "low_similarity",
       "passed": true,
-      "latency_us": 74.218
+      "latency_us": 45.815
+    },
+    {
+      "id": "lex_03",
+      "category": "low_similarity",
+      "partial": "Can I get some water please",
+      "final": "My stomach has been hurting since yesterday",
+      "similarity": 0.2,
+      "diverged": true,
+      "reason": "low_similarity",
+      "passed": true,
+      "latency_us": 56.54
+    },
+    {
+      "id": "lex_04",
+      "category": "low_similarity",
+      "partial": "Where is the registration desk located",
+      "final": "I twisted my ankle playing soccer in the park",
+      "similarity": 0.18029259896729777,
+      "diverged": true,
+      "reason": "low_similarity",
+      "passed": true,
+      "latency_us": 50.42
+    },
+    {
+      "id": "lex_05",
+      "category": "low_similarity",
+      "partial": "I parked my car outside",
+      "final": "My right index finger is swollen and painful",
+      "similarity": 0.11629353233830844,
+      "diverged": true,
+      "reason": "low_similarity",
+      "passed": true,
+      "latency_us": 34.289
     }
   ]
 }

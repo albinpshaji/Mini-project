@@ -321,7 +321,8 @@ def run_pipeline_benchmark(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Pipeline 6-Stage Latency & Clinical Benchmark")
     parser.add_argument("--config", default="config.yaml", help="Path to config.yaml")
-    parser.add_argument("--dataset", default="eval/data/clinical_vignettes_60.json", help="Path to clinical dataset")
+    parser.add_argument("--dataset", default=None, help="Path to clinical dataset")
+    parser.add_argument("--diverse", action="store_true", help="Run expanded 120-vignette diverse clinical benchmark suite")
     parser.add_argument("--mode", choices=["sequential", "speculative"], default="speculative", help="Pipeline execution mode")
     parser.add_argument("--threshold", type=float, default=0.7, help="Divergence similarity threshold")
     parser.add_argument("--cases", type=int, default=15, help="Number of test cases to evaluate")
@@ -330,9 +331,16 @@ if __name__ == "__main__":
     parser.add_argument("--delay", type=float, default=1.5, help="Simulated speaking delay in seconds (default: 1.5)")
     args = parser.parse_args()
 
+    dataset_path = args.dataset
+    if not dataset_path:
+        if args.diverse:
+            dataset_path = "eval/data/clinical_vignettes_120_diverse.json"
+        else:
+            dataset_path = "eval/data/clinical_vignettes_60.json"
+
     run_pipeline_benchmark(
         config_path=args.config,
-        dataset_path=args.dataset,
+        dataset_path=dataset_path,
         mode=args.mode,
         divergence_threshold=args.threshold,
         max_cases=args.cases,

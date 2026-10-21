@@ -58,6 +58,16 @@ LEVEL_1_PATTERNS = [
     re.compile(r"\bwon'?t stop bleeding\b", re.I),
     re.compile(r"\b(cannot|can'?t|unable to)\s+speak\b", re.I),
     re.compile(r"\btonic clonic seizure\b", re.I),
+    # Expanded Diverse Life Threats (Toxicology, Pediatrics, Obstetrics, Sepsis, Ophthalmic)
+    re.compile(r"\b(swallowed|ingested|choking on)\s+(a\s+)?(button\s+battery|caustic|battery|drain\s+cleaner|lye)\b", re.I),
+    re.compile(r"\b(drank|ingested|swallowed)\s+(concentrated\s+)?(bleach|drain\s+cleaner|kerosene|antifreeze|pesticide|organophosphate)\b", re.I),
+    re.compile(r"\b(opioid\s+overdose|fentanyl\s+overdose|not\s+breathing\s+after\s+taking\s+pills)\b", re.I),
+    re.compile(r"\b(purpuric\s+rash|non-?blanching\s+(purpuric\s+)?rash)\b", re.I),
+    re.compile(r"\b(alkali|acid|chemical)\s+(cleaning\s+liquid\s+)?(splashed|burn)\s+directly\s+into\b.{0,20}\beye", re.I),
+    re.compile(r"\b(severe\s+vaginal\s+bleeding\s+in\s+pregnancy|heavy\s+bleeding\s+during\s+pregnancy|bright\s+red\s+painless\s+vaginal\s+bleeding)\b", re.I),
+    re.compile(r"\b(positive\s+pregnancy\s+test|pregnant)\b.{0,50}\b(severe\s+lower\s+abdominal\s+pain\s+and\s+passed\s+out|syncope)\b", re.I),
+    re.compile(r"\b(ruptured\s+ectopic|ectopic\s+pregnancy)\b", re.I),
+    re.compile(r"\b(active\s+suicidal\s+thoughts\s+with\s+a\s+specific\s+plan|intent\s+to\s+end\s+my\s+life)\b", re.I),
 ]
 
 LEVEL_2_PATTERNS = [
@@ -80,6 +90,20 @@ LEVEL_2_PATTERNS = [
     re.compile(r"\b(seizure|unconscious|passed out|(?!fainted briefly)fainted)\b", re.I),
     re.compile(r"\b(car accident|seatbelt sign|high speed collision)\b", re.I),
     re.compile(r"\b(rigid neck|stiff neck|neck stiffness|sensitivity to (bright )?light|photophobia)\b", re.I),
+    # Expanded Level 2 Emergent patterns
+    re.compile(r"\b(overdose|intentional\s+overdose|swallowed\s+\d+\s+(pills|tablets)|tylenol\s+pills\s+two\s+hours\s+ago)\b", re.I),
+    re.compile(r"\b(carbon\s+monoxide|gas\s+generator\s+inside|cherry\s+red\s+skin)\b", re.I),
+    re.compile(r"\b(fell\s+on\s+blood\s+thinners|fall\s+on\s+(warfarin|blood\s+thinner|eliquis|apixaban)|scalp\s+laceration\s+and\s+confusion)\b", re.I),
+    re.compile(r"\b(unrelenting\s+headache\s+and\s+seeing\s+flashing\s+spots|flashing\s+spots\s+in\s+pregnancy|preeclampsia)\b", re.I),
+    re.compile(r"\b(barking\s+(seal\s+)?cough|stridor\s+at\s+rest|croup)\b", re.I),
+    re.compile(r"\b(infant|baby)\b.{0,35}\b(not\s+wetting\s+diapers|sunken\s+fontanelle|severe\s+dehydration)\b", re.I),
+    re.compile(r"\b(sudden\s+total\s+painless\s+loss\s+of\s+vision|curtain\s+falling\s+over\s+eye|rainbow\s+halos\s+around\s+lights)\b", re.I),
+    re.compile(r"\b(hot\s+potato\s+voice|peritonsillar\s+abscess|quinsy|unable\s+to\s+open\s+mouth)\b", re.I),
+    re.compile(r"\b(severe\s+alcohol\s+withdrawal|delirium\s+tremens)\b", re.I),
+    re.compile(r"\b(chemotherapy\s+patient\s+with\s+fever|shaking\s+rigors\s+and\s+shivering)\b", re.I),
+    re.compile(r"\b(diabetic\s+foot\s+ulcer\s+that\s+turned\s+black|necrotizing\s+fasciitis)\b", re.I),
+    re.compile(r"\b(severe\s+sudden\s+testicle\s+pain|twisting\s+(right|left)\s+lower\s+quadrant\s+pain\s+with\s+vomiting)\b", re.I),
+    re.compile(r"\b(heavy\s+nosebleed\s+for\s+over\s+an\s+hour|swallowing\s+blood\s+from\s+nose)\b", re.I),
 ]
 
 LEVEL_3_PATTERNS = [
@@ -87,7 +111,7 @@ LEVEL_3_PATTERNS = [
     re.compile(r"\bfluttering in (my )?chest\b", re.I),
     re.compile(r"\b(asthma|wheezing|bronchospasm)\b", re.I),
     re.compile(r"\b(severe abdominal pain|stomach pain|cramps|belly pain|flank pain)\b", re.I),
-    re.compile(r"\b(fracture|broken bone|dislocated|deformity)\b", re.I),
+    re.compile(r"\b(fracture|broken bone|dislocated|deformity|leg\s+shortened\s+and\s+externally\s+rotated)\b", re.I),
     re.compile(r"\b(fever of 10[1-9]|high fever)\b.{0,30}\b(days?|week)\b", re.I),
     re.compile(r"\bpersistent (vomiting|diarrhea)\b", re.I),
     re.compile(r"\bshort(ness)? of breath\b", re.I),
@@ -95,20 +119,26 @@ LEVEL_3_PATTERNS = [
     re.compile(r"\b(deep (kitchen )?knife cut|deep cut)\b", re.I),
     re.compile(r"\b(swelling in.{0,15}calf|calf.{0,20}(warm|tender))\b", re.I),
     re.compile(r"\b(migraine with flashing|migraine with aura)\b", re.I),
+    re.compile(r"\b(unable\s+to\s+keep\s+water\s+down\s+for\s+48\s+hours|hyperemesis)\b", re.I),
+    re.compile(r"\b(fever\b.{0,30}\bpus\s+draining\s+from\s+incision)\b", re.I),
+    re.compile(r"\b(panic\s+attack\s+with\s+hyperventilation|carpopedal\s+spasm)\b", re.I),
+    re.compile(r"\b(pelvic\s+pressure\s+and\s+fever\b.{0,30}\bdischarge|pelvic\s+inflammatory)\b", re.I),
+    re.compile(r"\b(cannot\s+urinate\s+since\s+yesterday|painfully\s+distended\s+bladder)\b", re.I),
 ]
 
 LEVEL_4_PATTERNS = [
     re.compile(r"\bpain in (my )?chest.{0,25}\b(press|ribs?|tender|touch|costochondritis)\b", re.I),
     re.compile(r"\b(sprain|twisted ankle|wrist pain|knee pain|ankle|shoulder hurts?)\b", re.I),
     re.compile(r"\b(cystitis|urinary|burns when (i )?pee|uti)\b", re.I),
-    re.compile(r"\b(ear pain|earache|sore throat)\b", re.I),
+    re.compile(r"\b(ear pain|earache|sore throat|pulling\s+on\s+right\s+ear)\b", re.I),
     re.compile(r"\b(minor cut|laceration|scraped|bruise)\b", re.I),
-    re.compile(r"\b(rash|itchy skin|hives)\b", re.I),
+    re.compile(r"\b(rash|itchy skin|hives|shingles\s+blisters)\b", re.I),
     re.compile(r"\b(dull throbbing headache|tension headache|migraine)\b", re.I),
     re.compile(r"\b(dizziness when I turn my head|room spins briefly)\b", re.I),
     re.compile(r"\b(pins and needles)\b", re.I),
     re.compile(r"\bconstipation\b", re.I),
     re.compile(r"\b(burning feeling behind (my )?breastbone|heartburn|acid reflux)\b", re.I),
+    re.compile(r"\b(holding\s+it\s+pronated|scratched\s+cornea|foreign\s+body\s+sensation)\b", re.I),
 ]
 
 LEVEL_5_PATTERNS = [
@@ -122,7 +152,13 @@ LEVEL_5_PATTERNS = [
     re.compile(r"\b(mild heartburn|heartburn after dinner)\b", re.I),
     re.compile(r"\b(tongue tingled|hot peppers|no allergic reaction)\b", re.I),
     re.compile(r"\bmild tension headache\b", re.I),
+    re.compile(r"\b(blocked\s+earwax|cerumen\s+impaction|muffled\s+hearing)\b", re.I),
+    re.compile(r"\b(diaper\s+rash|cradle\s+cap)\b", re.I),
+    re.compile(r"\b(routine\s+6\s+month\s+immunization|routine\s+prenatal\s+visit)\b", re.I),
+    re.compile(r"\b(mild\s+first\s+trimester\s+morning\s+sickness|mild\s+menstrual\s+cramps)\b", re.I),
+    re.compile(r"\b(post\s+flu\s+lingering\s+dry\s+cough)\b", re.I),
 ]
+
 
 
 @dataclass
@@ -258,11 +294,14 @@ def calculate_ktas_acuity(
         for m in pat.finditer(norm_text):
             if not is_negated(norm_text, m.start()):
                 matched_phrase = m.group(0)
+                dept = "General Medicine"
+                if any(w in norm_text for w in ["child", "toddler", "baby", "infant", "diaper", "pediatric"]):
+                    dept = "Pediatrics"
                 return KTASAssessment(
                     acuity_level=5,
                     tier_name=KTAS_TIERS[5]["name"],
                     target_time_min=KTAS_TIERS[5]["target_time_min"],
-                    recommended_department="General Medicine",
+                    recommended_department=dept,
                     primary_driver=f"Non-urgent presentation: '{matched_phrase}'",
                     clinical_rationale="Mild self-limiting symptoms appropriate for primary care or outpatient clinic.",
                     escalate_to_staff=False,
@@ -279,6 +318,8 @@ def calculate_ktas_acuity(
                     dept = "Orthopedics"
                 elif any(w in matched_phrase for w in ["ear", "throat"]):
                     dept = "ENT & Airway Clinic"
+                if any(w in norm_text for w in ["child", "toddler", "baby", "infant", "daughter", "son", "pulling on right ear", "nursemaid"]):
+                    dept = "Pediatrics"
                 return KTASAssessment(
                     acuity_level=4,
                     tier_name=KTAS_TIERS[4]["name"],
@@ -291,22 +332,28 @@ def calculate_ktas_acuity(
                 )
 
     if sev in ("mild", "none"):
+        dept = "General Medicine"
+        if any(w in norm_text for w in ["child", "toddler", "baby", "infant"]):
+            dept = "Pediatrics"
         return KTASAssessment(
             acuity_level=5,
             tier_name=KTAS_TIERS[5]["name"],
             target_time_min=KTAS_TIERS[5]["target_time_min"],
-            recommended_department="General Medicine",
+            recommended_department=dept,
             primary_driver="Mild symptom presentation with no distress indicators",
             clinical_rationale="Stable outpatient triage disposition.",
             escalate_to_staff=False,
             matched_red_flags=flags,
         )
 
+    dept = "General Medicine"
+    if any(w in norm_text for w in ["child", "toddler", "baby", "infant"]):
+        dept = "Pediatrics"
     return KTASAssessment(
         acuity_level=4,
         tier_name=KTAS_TIERS[4]["name"],
         target_time_min=KTAS_TIERS[4]["target_time_min"],
-        recommended_department="General Medicine",
+        recommended_department=dept,
         primary_driver="Unspecified stable symptoms without red flags",
         clinical_rationale="Standard triage intake for outpatient or general clinical review.",
         escalate_to_staff=False,

@@ -73,6 +73,29 @@ RED_FLAG_PATTERNS = {
         r"\bswelling\s+(of|in)\s+(my\s+)?(face|throat|lips)\b",
         r"\banaphyla",
     ],
+    "toxicology": [
+        r"\b(swallowed|ingested|drank|drinking)\b.{0,30}\b(bleach|drain cleaner|lye|caustic|acid|battery|button battery|organophosphate|antifreeze|ethylene glycol|pesticide)\b",
+        r"\b(bleach|drain cleaner|oven cleaner|battery|pesticide)\b.{0,30}\b(ingestion|swallowed|poison|toxic)\b",
+        r"\b(overdose|overdosed|took all (my|the) pills|full bottle of)\b",
+    ],
+    "pediatric": [
+        r"\b(infant|baby|newborn|toddler)\b.{0,40}\b(lethargic|unresponsive|limp|not breathing|turning blue|sunken fontanelle|grunting)\b",
+        r"\b(barking cough|inspiratory stridor|stridor at rest|epiglottitis)\b",
+        r"\b(swallowed|ingested)\b.{0,25}\b(button battery|magnet)\b",
+    ],
+    "obstetric": [
+        r"\b(pregnant|pregnancy|trimester)\b.{0,35}\b(bleeding|hemorrhage|severe (cramping|pain)|fluid leak)\b",
+        r"\b(ectopic pregnancy|placental abruption|severe preeclampsia)\b",
+    ],
+    "sepsis": [
+        r"\b(non-blanching|petechial|purpuric)\s+(rash|spots)\b",
+        r"\b(septic shock|severe sepsis)\b",
+        r"\b(high fever|shivering|rigors)\b.{0,35}\b(confused|confusion|mottled|cold clammy|hypotensive)\b",
+    ],
+    "ophthalmic": [
+        r"\b(chemical|alkali|acid|bleach)\s+(in|to|splashed into)\s+(my\s+)?eye\b",
+        r"\b(sudden\s+(total\s+)?loss of vision|acute loss of sight|penetrating eye injury)\b",
+    ],
 }
 
 _COMPILED = {
