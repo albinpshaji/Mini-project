@@ -360,12 +360,17 @@ def run_multiturn_benchmark(
             history_compressed.append({"role": "user", "text": user_utterance})
             history_compressed.append({"role": "assistant", "text": response_c})
 
+            # Calculate uncompressed KV footprint
+            uncomp_chars = sum(len(m.get("text", m.get("content", ""))) for m in history_uncompressed)
+            uncomp_est_tokens = max(1, int(uncomp_chars / 3.8))
+            uncomp_kv_mb = round((uncomp_est_tokens * 131072) / (1024 * 1024), 2)
+
             speedup_turn = round(tps_c / max(0.01, tps_u), 2)
             vram_now = get_current_vram_mb()
 
             print(
-                f"  Turn {turn_idx:2d} | Uncomp: {tps_u:5.2f} tok/s ({dur_u*1000:6.1f}ms) | "
-                f"SnapKV: {tps_c:5.2f} tok/s ({dur_c*1000:6.1f}ms) | "
+                f"  Turn {turn_idx:2d} | Uncomp: {tps_u:5.2f} tok/s ({dur_u*1000:6.1f}ms, KV: {uncomp_kv_mb:5.1f}MB) | "
+                f"SnapKV: {tps_c:5.2f} tok/s ({dur_c*1000:6.1f}ms, KV: {kv_mb:4.1f}MB) | "
                 f"Preserve: {speedup_turn:4.2f}x | Pruned: {pruned:3d} tok | VRAM: {vram_now:.0f}MB"
             )
 
@@ -377,6 +382,7 @@ def run_multiturn_benchmark(
                 "uncompressed_tok_s": tps_u,
                 "uncompressed_latency_ms": round(dur_u * 1000, 1),
                 "uncompressed_tokens": tok_count_u,
+                "uncompressed_kv_mb": uncomp_kv_mb,
                 "compressed_tok_s": tps_c,
                 "compressed_latency_ms": round(dur_c * 1000, 1),
                 "compressed_tokens": tok_count_c,
@@ -424,6 +430,7 @@ def run_multiturn_benchmark(
     needle_accuracy = round((needle_matches_found / max(1, total_needle_entities)) * 100.0, 1)
     peak_vram = max(r["vram_mb"] for r in all_turn_records)
     peak_kv_mb = max(r["active_kv_footprint_mb"] for r in all_turn_records)
+    peak_uncomp_kv_mb = max(r["uncompressed_kv_mb"] for r in all_turn_records)
 
     raw_csv_path = os.path.join(run_export_dir, "raw_metrics.csv")
     with open(raw_csv_path, "w", newline="", encoding="utf-8") as f:
@@ -436,7 +443,7 @@ def run_multiturn_benchmark(
         "timestamp": timestamp,
         "branch": "feature/snapkv-pruning-phase5",
         "model_name": model_name,
-        "num_consultations": len(MULTITURN_CLINICAL_PROFILES),
+        "num_consultations": len(profiles),
         "turns_per_consultation": turns_per_patient,
         "uncompressed_turn1_tok_s": mean_u_t1,
         "uncompressed_turn12_tok_s": mean_u_t12,
@@ -448,6 +455,7 @@ def run_multiturn_benchmark(
         "mean_tokens_pruned": mean_pruned,
         "mean_compression_ratio": mean_ratio,
         "peak_kv_footprint_mb": peak_kv_mb,
+        "peak_uncomp_kv_mb": peak_uncomp_kv_mb,
         "needle_retention_accuracy": needle_accuracy,
         "peak_vram_mb": peak_vram,
         "summary_json_path": os.path.join(run_export_dir, "summary.json"),
@@ -462,13 +470,13 @@ def run_multiturn_benchmark(
     record_multiturn_db(summary, db_path=db_path)
 
     print("\n" + "=" * 90)
-    print("🏆 PHASE 5 SNAPKV MULTI-TURN BENCHMARK SUMMARY")
+    print("🏆 PHASE 5 SNAPKV MULTI-TURN BENCHMARK SUMMARY (12 TURNS)")
     print("=" * 90)
     print(f"  • Uncompressed Baseline Throughput : Turn 1: {mean_u_t1:5.2f} tok/s  ➔  Turn 12: {mean_u_t12:5.2f} tok/s ({preservation_u*100:.1f}% preserved)")
     print(f"  • SnapKV Compressed Throughput     : Turn 1: {mean_c_t1:5.2f} tok/s  ➔  Turn 12: {mean_c_t12:5.2f} tok/s ({preservation_c*100:.1f}% preserved)")
     print(f"  • Turn 12 Relative Acceleration    : {turn12_speedup}x speedup over uncompressed")
     print(f"  • Mean Tokens Pruned per Session   : {mean_pruned:.1f} tokens (Ratio: {mean_ratio:.3f})")
-    print(f"  • Active Multi-Turn KV Footprint   : {peak_kv_mb:.2f} MB (Locked strictly < 160 MB)")
+    print(f"  • Peak KV Footprint Comparison     : Uncompressed: {peak_uncomp_kv_mb:.1f} MB ➔ SnapKV: {peak_kv_mb:.1f} MB ({(1 - peak_kv_mb/peak_uncomp_kv_mb)*100:.1f}% memory saved)")
     print(f"  • Needle Clinical Allergy Recall   : {needle_accuracy:.1f}% (Zero clinical amnesia)")
     print(f"  • Peak Physical GPU VRAM           : {peak_vram:.1f} MB (Well under 4,096 MB physical budget)")
     print("=" * 90)

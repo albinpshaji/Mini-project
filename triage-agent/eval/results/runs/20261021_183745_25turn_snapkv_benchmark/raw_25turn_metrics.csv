@@ -1,0 +1,26 @@
+patient_id,category,turn,user_utterance,uncompressed_tok_s,uncompressed_latency_ms,uncompressed_tokens,uncompressed_kv_mb,compressed_tok_s,compressed_latency_ms,compressed_tokens,speedup_factor,tokens_pruned,compression_ratio,active_kv_footprint_mb,vram_mb
+patient_01_cardiac_25,Cardiac Emergency & Anticoagulation,1,I have severe crushing substernal chest pressure radiating t...,4.46,9190.1,41,14.38,24.06,1371.5,33,5.39,0,1.0,45.0,3051.0
+patient_01_cardiac_25,Cardiac Emergency & Anticoagulation,2,"The pressure feels like an elephant sitting on my chest, nur...",18.12,1876.7,34,22.0,20.56,2139.9,44,1.13,0,1.0,45.0,3053.0
+patient_01_cardiac_25,Cardiac Emergency & Anticoagulation,3,"Yes, I feel somewhat nauseous and dizzy when I try to stand ...",17.56,2107.2,37,30.12,20.3,2019.6,41,1.16,0,1.0,45.0,3075.0
+patient_01_cardiac_25,Cardiac Emergency & Anticoagulation,4,"No, I have never had a diagnosed heart attack before in my l...",15.25,2098.7,32,37.25,21.32,3236.5,69,1.4,38,0.846,26.0,3075.0
+patient_01_cardiac_25,Cardiac Emergency & Anticoagulation,5,I took one sublingual nitroglycerin tablet about 20 minutes ...,17.54,2166.9,38,46.88,20.68,3336.8,69,1.18,90,0.748,33.38,3075.0
+patient_01_cardiac_25,Cardiac Emergency & Anticoagulation,6,My wife drove me here directly to the emergency department e...,19.06,2517.9,48,56.12,19.68,1828.8,36,1.03,195,0.583,34.12,3075.0
+patient_01_cardiac_25,Cardiac Emergency & Anticoagulation,7,I am currently sitting in the registration triage waiting ro...,18.07,2324.4,42,64.88,19.61,1835.7,36,1.09,273,0.487,32.38,3075.0
+patient_01_cardiac_25,Cardiac Emergency & Anticoagulation,8,"Yes, I have chronic hypertension and I take Lisinopril 20mg ...",15.64,2684.7,42,74.62,17.76,2026.7,36,1.14,337,0.434,32.25,3075.0
+patient_01_cardiac_25,Cardiac Emergency & Anticoagulation,9,The pain is now radiating slightly into my left lower jaw as...,16.85,2433.1,41,83.5,18.06,2048.2,37,1.07,400,0.394,32.5,3075.0
+patient_01_cardiac_25,Cardiac Emergency & Anticoagulation,10,Can you tell me how long the wait is for cardiology or resus...,15.85,2461.3,39,92.0,18.66,2357.4,44,1.18,441,0.394,35.88,3075.0
+patient_01_cardiac_25,Cardiac Emergency & Anticoagulation,11,I also feel a bit sweaty and cold on my forehead and palms r...,16.94,2715.8,46,102.0,18.45,2384.4,44,1.09,507,0.368,36.88,3075.0
+patient_01_cardiac_25,Cardiac Emergency & Anticoagulation,12,My father had a fatal myocardial infarction when he was 54 y...,16.14,2973.6,48,113.0,15.6,2499.4,39,0.97,582,0.338,37.12,3075.0
+patient_01_cardiac_25,Cardiac Emergency & Anticoagulation,13,I have not had anything to eat or drink since breakfast arou...,14.92,2815.8,42,122.5,18.48,2110.3,39,1.24,655,0.311,37.0,3075.0
+patient_01_cardiac_25,Cardiac Emergency & Anticoagulation,14,"My breathing feels slightly heavier now, especially when I t...",13.65,3077.9,42,132.12,15.32,2414.6,37,1.12,725,0.291,37.25,3075.0
+patient_01_cardiac_25,Cardiac Emergency & Anticoagulation,15,"I do not smoke cigarettes, but I quit smoking about ten year...",14.99,2935.6,44,141.75,17.91,2288.7,41,1.19,797,0.273,37.38,3075.0
+patient_01_cardiac_25,Cardiac Emergency & Anticoagulation,16,"No, I have not had any fever, chills, or cough in the last w...",14.9,2885.7,43,151.12,17.46,2348.1,41,1.17,867,0.259,37.88,3075.0
+patient_01_cardiac_25,Cardiac Emergency & Anticoagulation,17,"The crushing sensation is constant, it does not change when ...",14.99,2867.9,43,161.12,13.07,1530.4,20,0.87,942,0.243,37.75,3075.0
+patient_01_cardiac_25,Cardiac Emergency & Anticoagulation,18,My heart feels like it is fluttering irregularly in my chest...,15.67,3126.4,49,172.25,12.75,1490.5,19,0.81,1009,0.218,35.12,3075.0
+patient_01_cardiac_25,Cardiac Emergency & Anticoagulation,19,I took my regular morning dose of Warfarin yesterday evening...,15.3,3006.6,46,182.62,13.84,1517.1,21,0.9,1053,0.211,35.25,3075.0
+patient_01_cardiac_25,Cardiac Emergency & Anticoagulation,20,"My legs are not swollen, but my hands feel quite clammy and ...",16.0,3250.9,52,193.88,10.85,1290.3,14,0.68,1097,0.206,35.62,3075.0
+patient_01_cardiac_25,Cardiac Emergency & Anticoagulation,21,Is an electrocardiogram machine ready to check my heart rhyt...,15.86,3277.9,52,204.62,18.26,2738.8,50,1.15,1145,0.194,34.5,3075.0
+patient_01_cardiac_25,Cardiac Emergency & Anticoagulation,22,The pain in my jaw is spreading toward my ear on the left si...,14.76,2913.7,43,213.88,17.14,2450.0,42,1.16,1180,0.215,40.5,3075.0
+patient_01_cardiac_25,Cardiac Emergency & Anticoagulation,23,I brought my current medication pill organizer in my jacket ...,15.14,2773.9,42,223.5,16.6,2048.6,34,1.1,1263,0.201,39.75,3075.0
+patient_01_cardiac_25,Cardiac Emergency & Anticoagulation,24,I feel a slight sense of impending doom and growing anxiety....,15.42,3047.6,47,234.12,18.04,2827.8,51,1.17,1341,0.187,38.62,3075.0
+patient_01_cardiac_25,Cardiac Emergency & Anticoagulation,25,"Can you summarize my drug allergies, blood thinner, exact on...",15.09,4838.3,73,250.75,17.17,4368.9,75,1.14,1409,0.187,40.62,3075.0

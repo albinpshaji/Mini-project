@@ -1,0 +1,13 @@
+patient_id,category,turn,user_utterance,uncompressed_tok_s,uncompressed_latency_ms,uncompressed_tokens,compressed_tok_s,compressed_latency_ms,compressed_tokens,speedup_factor,tokens_pruned,compression_ratio,active_kv_footprint_mb,vram_mb
+patient_01_cardiac,Cardiac Emergency & Anticoagulation,1,I have severe crushing substernal chest pressure radiating t...,4.8,8325.1,40,25.11,1274.2,32,5.23,0,1.0,45.0,3051.0
+patient_01_cardiac,Cardiac Emergency & Anticoagulation,2,"The pressure feels like an elephant sitting on my chest, nur...",19.19,2031.8,39,20.57,1993.0,41,1.07,0,1.0,45.0,3053.0
+patient_01_cardiac,Cardiac Emergency & Anticoagulation,3,"Yes, I feel somewhat nauseous and dizzy when I try to stand....",18.31,1911.9,35,18.43,1627.7,30,1.01,0,1.0,45.0,3053.0
+patient_01_cardiac,Cardiac Emergency & Anticoagulation,4,"No, I have never had a heart attack before in my life....",18.38,2013.0,37,20.85,2061.9,43,1.13,34,0.846,23.38,3053.0
+patient_02_respiratory,Acute Asthma Exacerbation & Drug Sensitivity,1,I am having severe shortness of breath and loud wheezing tha...,21.83,1786.5,39,26.32,1899.9,50,1.21,0,1.0,45.0,3053.0
+patient_02_respiratory,Acute Asthma Exacerbation & Drug Sensitivity,2,I had to use my rescue inhaler four times in the past hour w...,21.15,1749.6,37,23.16,2460.9,57,1.1,0,1.0,45.0,3053.0
+patient_02_respiratory,Acute Asthma Exacerbation & Drug Sensitivity,3,My chest feels completely tight and I can barely speak in fu...,20.25,2320.6,47,15.62,1728.7,27,0.77,0,1.0,45.0,3053.0
+patient_02_respiratory,Acute Asthma Exacerbation & Drug Sensitivity,4,"Yes, my pulse oximeter at home showed my oxygen saturation w...",20.36,2161.5,44,20.93,2006.4,42,1.03,119,0.566,19.38,3053.0
+patient_03_trauma,Musculoskeletal Trauma & Hemorrhage Risk,1,I fell down the stairs and my right ankle is visibly deforme...,22.93,2616.1,60,26.06,2609.8,68,1.14,0,1.0,45.0,3053.0
+patient_03_trauma,Musculoskeletal Trauma & Hemorrhage Risk,2,It happened about 30 minutes ago on concrete steps....,22.75,1714.6,39,23.54,1996.8,47,1.03,0,1.0,45.0,3053.0
+patient_03_trauma,Musculoskeletal Trauma & Hemorrhage Risk,3,I heard a very loud snapping pop sound when my foot twisted....,21.17,2455.8,52,16.33,1837.0,30,0.77,0,1.0,45.0,3053.0
+patient_03_trauma,Musculoskeletal Trauma & Hemorrhage Risk,4,"I cannot put any weight on it whatsoever, even for a second....",19.71,2993.4,59,19.12,3137.8,60,0.97,105,0.61,20.5,3053.0

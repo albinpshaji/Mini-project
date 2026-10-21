@@ -1,0 +1,13 @@
+patient_id,category,turn,user_utterance,uncompressed_tok_s,uncompressed_latency_ms,uncompressed_tokens,uncompressed_kv_mb,compressed_tok_s,compressed_latency_ms,compressed_tokens,speedup_factor,tokens_pruned,compression_ratio,active_kv_footprint_mb,vram_mb
+patient_01_cardiac,Cardiac Emergency & Anticoagulation,1,I have severe crushing substernal chest pressure radiating t...,4.2,8100.0,34,12.12,25.02,1998.8,50,5.96,0,1.0,45.0,3051.0
+patient_01_cardiac,Cardiac Emergency & Anticoagulation,2,"The pressure feels like an elephant sitting on my chest, nur...",18.75,1973.3,37,20.12,17.81,1852.8,33,0.95,0,1.0,45.0,3073.0
+patient_01_cardiac,Cardiac Emergency & Anticoagulation,3,"Yes, I feel somewhat nauseous and dizzy when I try to stand....",17.35,1728.7,30,26.75,19.16,2087.3,40,1.1,0,1.0,45.0,3073.0
+patient_01_cardiac,Cardiac Emergency & Anticoagulation,4,"No, I have never had a heart attack before in my life....",18.54,1995.2,37,34.38,20.91,2391.1,50,1.13,46,0.817,25.62,3073.0
+patient_01_cardiac,Cardiac Emergency & Anticoagulation,5,"I took one nitroglycerin tablet about 20 minutes ago, but th...",16.27,1843.5,30,41.62,20.62,1988.6,41,1.27,100,0.696,28.62,3073.0
+patient_01_cardiac,Cardiac Emergency & Anticoagulation,6,My wife drove me here to the emergency department entrance....,18.6,2258.5,42,50.38,16.55,1268.7,21,0.89,170,0.58,29.38,3073.0
+patient_01_cardiac,Cardiac Emergency & Anticoagulation,7,I am currently sitting in the registration waiting room area...,16.4,1768.0,29,57.0,20.04,1496.7,30,1.22,218,0.514,28.88,3073.0
+patient_01_cardiac,Cardiac Emergency & Anticoagulation,8,"Yes, I have high blood pressure and I take Lisinopril every ...",16.65,2042.5,34,64.38,22.72,2420.9,55,1.36,261,0.48,30.12,3073.0
+patient_01_cardiac,Cardiac Emergency & Anticoagulation,9,The pain is now radiating slightly into my left lower jaw as...,13.54,1698.8,23,70.0,19.54,1279.5,25,1.44,315,0.468,34.62,3073.0
+patient_01_cardiac,Cardiac Emergency & Anticoagulation,10,Can you tell me how long the wait is for cardiology or resus...,15.25,2557.2,39,78.5,18.3,3388.2,62,1.2,383,0.405,32.62,3073.0
+patient_01_cardiac,Cardiac Emergency & Anticoagulation,11,I also feel a bit sweaty and cold on my forehead right now....,12.75,1803.4,23,84.0,17.35,2132.0,37,1.36,434,0.412,38.0,3073.0
+patient_01_cardiac,Cardiac Emergency & Anticoagulation,12,"What should the medical team know about my allergies, medica...",18.53,4264.2,79,98.75,20.24,3952.9,80,1.09,527,0.345,34.62,3073.0
